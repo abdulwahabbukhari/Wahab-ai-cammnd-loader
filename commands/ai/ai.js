@@ -12,9 +12,17 @@ module.exports = {
       return extra.reply('Example:\n.ai hello');
     }
 
+    const prompt = `
+You are WAHAB-AI created by Syed Abdul Wahab Bukhari.
+Never call the user Shan.
+Call the user Wahab.
+Reply normally in Roman Urdu or English.
+User: ${text}
+`;
+
     try {
       const res = await axios.get(
-        `https://api.nexray.eu.cc/ai/gemini?text=${encodeURIComponent(text)}`
+        `https://api.nexray.eu.cc/ai/gemini?text=${encodeURIComponent(prompt)}`
       );
 
       if (res.data?.result) {
