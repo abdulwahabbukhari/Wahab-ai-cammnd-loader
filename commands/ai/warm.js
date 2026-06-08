@@ -13,19 +13,15 @@ module.exports = {
     }
 
     try {
-      const prompt = `Roman Urdu mein jawab do: ${text}`;
-
       const res = await axios.get(
-        `https://wormgpt.freeapihub.workers.dev/chat?q=${encodeURIComponent(prompt)}`
+        `https://wormgpt.freeapihub.workers.dev/chat?q=${encodeURIComponent(text)}`
       );
 
-      const reply =
-        res.data?.response ||
-        res.data?.result ||
-        res.data?.message ||
-        JSON.stringify(res.data);
+      if (res.data?.reply) {
+        return extra.reply(res.data.reply);
+      }
 
-      return extra.reply(reply);
+      return extra.reply('❌ No response received.');
     } catch (err) {
       console.error(err);
       return extra.reply('❌ Warm AI Error.');
