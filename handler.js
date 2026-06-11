@@ -92,10 +92,8 @@ const handleMessage = async (sock, msg) => {
     let isCmd = textMsg.startsWith(activeConfig.prefix);
 
     // ================= 1. CHATBOT FEATURE (AI Auto Reply) =================
-    // ================= 1. CHATBOT FEATURE (AI Auto Reply) =================
+// ================= 1. CHATBOT FEATURE (AI Auto Reply) =================
 if (activeConfig.autoReply && !isFromMe) {
-
-  const botJid = normalizeJid(sock.user.id);
 
   const mentionedJids =
     contentMsg?.extendedTextMessage?.contextInfo?.mentionedJid || [];
@@ -108,9 +106,11 @@ if (activeConfig.autoReply && !isFromMe) {
 
     const persona = getPersona().replace(/\{name\}/g, userName);
 
+    const cleanText = textMsg.replace(/@\d+/g, '').trim();
+
     try {
       const res = await axios.get(
-        `https://api.nexray.eu.cc/ai/gemini?text=${encodeURIComponent(persona + textMsg)}`
+        `https://api.nexray.eu.cc/ai/gemini?text=${encodeURIComponent(persona + cleanText)}`
       );
 
       if (res.data.status && res.data.result) {
@@ -240,4 +240,4 @@ module.exports = {
   isOwner
 };
 
-                                            
+      
