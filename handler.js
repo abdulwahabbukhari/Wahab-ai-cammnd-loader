@@ -92,28 +92,39 @@ const handleMessage = async (sock, msg) => {
     let isCmd = textMsg.startsWith(activeConfig.prefix);
 
     // ================= 1. CHATBOT FEATURE (AI Auto Reply) =================
-    if (activeConfig.autoReply && !isFromMe && !isGroup) {
-      if (!isCmd && textMsg.length > 0) {
-        await sock.sendPresenceUpdate('composing', from);
+    // ================= 1. CHATBOT FEATURE (AI Auto Reply) =================
+if (activeConfig.autoReply && !isFromMe) {
 
-        const persona = getPersona().replace(/\{name\}/g, userName);
+  const botJid = normalizeJid(sock.user.id);
 
-        try {
-          const res = await axios.get(
-            `https://api.nexray.eu.cc/ai/gemini?text=${encodeURIComponent(persona + textMsg)}`
-          );
-          if (res.data.status && res.data.result) {
-            await sock.sendMessage(
-              from,
-              { text: res.data.result.trim() },
-              { quoted: msg }
-            );
-          }
-        } catch (err) {
-          console.error('Chatbot Error: ', err.message);
-        }
+  const mentionedJids =
+    contentMsg?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+
+  const isBotMentioned = mentionedJids.includes(botJid);
+
+  if ((!isGroup || isBotMentioned) && !isCmd && textMsg.length > 0) {
+
+    await sock.sendPresenceUpdate('composing', from);
+
+    const persona = getPersona().replace(/\{name\}/g, userName);
+
+    try {
+      const res = await axios.get(
+        `https://api.nexray.eu.cc/ai/gemini?text=${encodeURIComponent(persona + textMsg)}`
+      );
+
+      if (res.data.status && res.data.result) {
+        await sock.sendMessage(
+          from,
+          { text: res.data.result.trim() },
+          { quoted: msg }
+        );
       }
+    } catch (err) {
+      console.error('Chatbot Error:', err.message);
     }
+  }
+}
 
     // ================= 2. MODE FEATURE & COMMAND EXECUTION =================
     if (!isCmd) return;
@@ -228,4 +239,5 @@ module.exports = {
   initializeAntiCall,
   isOwner
 };
+
   
