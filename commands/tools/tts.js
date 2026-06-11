@@ -25,7 +25,7 @@ module.exports = {
         {
           responseType: 'arraybuffer',
           headers: {
-            'xi-api-key': sk_4864bd6f9c07410dbe4892fee904f32b6385408576fbd131,
+            'xi-api-key': 'sk_4864bd6f9c07410dbe4892fee904f32b6385408576fbd131';
             'Content-Type': 'application/json'
           }
         }
