@@ -9,17 +9,21 @@ module.exports = {
     const text = args.join(' ');
 
     if (!text) {
-      return extra.reply('Example:\n.tts Assalam o Alaikum');
+      return extra.reply('Example:\n.tts hello');
     }
 
     try {
-      const audioUrl =
-        `https://tts.fastdevelopers.workers.dev/tts?voice=nova&text=${encodeURIComponent(text)}`;
+      const { data } = await axios.get(
+        `https://tts.fastdevelopers.workers.dev/tts?voice=nova&text=${encodeURIComponent(text)}`,
+        {
+          responseType: 'arraybuffer'
+        }
+      );
 
       await sock.sendMessage(
         extra.from,
         {
-          audio: { url: audioUrl },
+          audio: Buffer.from(data),
           mimetype: 'audio/mpeg',
           ptt: true
         },
@@ -27,7 +31,7 @@ module.exports = {
       );
 
     } catch (err) {
-      console.error('TTS Error:', err.message);
+      console.error('TTS Error:', err.response?.data || err.message);
       return extra.reply('❌ TTS Error.');
     }
   }
