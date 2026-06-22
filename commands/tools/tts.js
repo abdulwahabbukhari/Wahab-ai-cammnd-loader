@@ -3,7 +3,7 @@ const axios = require('axios');
 module.exports = {
   name: 'tts',
   category: 'tools',
-  description: 'Text To Speech (Bypass Format Error)',
+  description: 'Text To Speech (Cloud Load Fixed)',
   usage: '.tts [your text]',
 
   async execute(sock, msg, args, extra) {
@@ -23,22 +23,22 @@ module.exports = {
 
       const audioBuffer = Buffer.from(response.data);
 
-      // Hack: ptt ko false kar diya aur mimetype ko standard mp3 rakha
-      // Is se audio click karne par direct play ho jaye gi bina error diye
+      // Khtambum Server ke load error ko bypass karne ke liye proper stream property
       await sock.sendMessage(
         from,
         {
           audio: audioBuffer,
-          mimetype: 'audio/mpeg', 
-          ptt: false // Voice note ke bajaye audio track bana kar bhejein ge
+          mimetype: 'audio/mp4', // MP4 container load error ko hal karta hai
+          ptt: false,
+          seconds: 15, // File duration manually pass karne se load ka error khatam ho jata hai
         },
         { quoted: msg }
       );
 
     } catch (err) {
-      console.error('TTS Bypass Error:', err.message);
-      return extra.reply('❌ TTS Error: Server storage format block.');
+      console.error('TTS Load Error:', err.message);
+      return extra.reply('❌ TTS Error: Server media load failed.');
     }
   }
 };
-          
+    
