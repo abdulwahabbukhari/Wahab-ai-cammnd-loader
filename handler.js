@@ -78,7 +78,6 @@ const handleMessage = async (sock, msg) => {
     const isFromMe = msg.key.fromMe;
     
     // Sender ID theek se extract karna
-    // Use participantAlt if available for v7 compatibility
     const sender = normalizeJid(msg.key.participant || msg.key.remoteJid);
     
     const userName = msg.pushName || 'Friend';
@@ -89,7 +88,37 @@ const handleMessage = async (sock, msg) => {
     let body = contentMsg?.conversation || contentMsg?.extendedTextMessage?.text || contentMsg?.imageMessage?.caption || contentMsg?.videoMessage?.caption || '';
     let textMsg = body.trim();
     
-    let isCmd = textMsg.startsWith(activeConfig.prefix);
+    // 🚀 NEW: NOPREFIX LOGIC ADDED HERE
+    let isCmd = false;
+    let commandName = '';
+    let args = [];
+
+    if (textMsg.startsWith(activeConfig.prefix)) {
+      // With Prefix
+      isCmd = true;
+      args = textMsg.slice(activeConfig.prefix.length).trim().split(/\s+/);
+      commandName = args.shift().toLowerCase();
+    } else if (activeConfig.noprefix) {
+      // Without Prefix (If enabled in config)
+      let tempArgs = textMsg.trim().split(/\s+/);
+      let possibleCmd = tempArgs[0]?.toLowerCase();
+      
+      let commandExists = commands.has(possibleCmd);
+      if (!commandExists) {
+        for (const cmd of commands.values()) {
+          if (cmd.aliases && cmd.aliases.includes(possibleCmd)) {
+            commandExists = true;
+            break;
+          }
+        }
+      }
+
+      if (commandExists) {
+        isCmd = true;
+        commandName = possibleCmd;
+        args = tempArgs.slice(1);
+      }
+    }
 
     // ================= 1. CHATBOT FEATURE (AI Auto Reply) =================
     if (activeConfig.autoReply && !isFromMe && !isGroup) {
@@ -122,10 +151,8 @@ const handleMessage = async (sock, msg) => {
       return; 
     }
 
-    const args = textMsg.slice(activeConfig.prefix.length).trim().split(/\s+/);
-    const commandName = args.shift().toLowerCase();
-
-    const command = commands.get(commandName);
+    // Yahan pe direct command check kar raha hai kyunke upar args parse ho chuke hain
+    const command = commands.get(commandName) || Array.from(commands.values()).find(c => c.aliases && c.aliases.includes(commandName));
     if (!command) return;
 
     if (command.ownerOnly && !isSenderOwner && !isFromMe) {
@@ -136,7 +163,7 @@ const handleMessage = async (sock, msg) => {
       );
     }
 
-    // Command Execute karna
+    // Command Execute karna (Simple style, no Meta AI tags)
     await command.execute(sock, msg, args, {
       from,
       sender,
@@ -178,15 +205,31 @@ const initializeAntiCall = (sock) => {
     try {
       const data = loadData();
       if (!data.enabled) return;
+      
+      // 🔄 Live config read karo takay whitelist update hoti rahay
+      delete require.cache[require.resolve('./config')];
+      const activeConfig = require('./config');
+
       const now = Date.now();
       const DAY = 24 * 60 * 60 * 1000;
       let changed = false;
 
       for (const call of calls) {
         if (call.status !== 'offer') continue;
-        changed = true;
+        
         const caller = normalizeJid(call.from);
+        const callerNumber = caller.split('@')[0].split(':')[0];
 
+        // 🛡️ WHITELIST CHECK: Owners aur Allowed Callers ko ignore karna hai
+        const isOwner = activeConfig.ownerNumber.includes(callerNumber);
+        const isAllowedCaller = (activeConfig.allowedCallers || []).includes(callerNumber);
+
+        if (isOwner || isAllowedCaller) {
+          console.log(`[🛡️ SYED MD] Call bypassed for whitelisted number: ${callerNumber}`);
+          continue; 
+        }
+
+        changed = true;
         await sock.rejectCall(call.id, caller);
 
         if (data.warnings[caller] && now - data.warnings[caller].lastTime >= DAY) {
@@ -228,4 +271,4 @@ module.exports = {
   initializeAntiCall,
   isOwner
 };
-  
+    
