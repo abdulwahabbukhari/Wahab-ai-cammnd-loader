@@ -3,7 +3,7 @@ const axios = require('axios');
 module.exports = {
   name: 'quran',
   aliases: ['surah', 'para', 'ayat', 'q'],
-  category: 'islamic',
+  category: 'general',
   description: 'Search Quran by Surah, Para (Juz), or specific Ayah with multi-lingual support',
   usage: '.quran [surah/para/ayah] [number] [range]',
 
