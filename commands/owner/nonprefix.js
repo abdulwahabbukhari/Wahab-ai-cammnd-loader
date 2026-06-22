@@ -1,13 +1,17 @@
+
+
+
 /**
- * No-Prefix Command - Toggle prefix requirement for commands (Simple Version for SYED MD)
+ * No-Prefix Command - Toggle prefix requirement for commands (Fixed Path for SYED MD)
  */
 
 const fs = require('fs');
 const path = require('path');
-const config = require('../../config');
+
+// 🚀 VIP FIX: Direct root folder se config dhondega!
+const configPath = path.join(process.cwd(), 'config.js');
 
 function updateConfigBoolean(setting, value) {
-  const configPath = path.join(__dirname, '../../config.js');
   try {
     let configData = fs.readFileSync(configPath, 'utf8');
     // Regex to find the setting and change its boolean value
@@ -15,11 +19,14 @@ function updateConfigBoolean(setting, value) {
     if (regex.test(configData)) {
         configData = configData.replace(regex, `$1${value}`);
         fs.writeFileSync(configPath, configData, 'utf8');
+        return true;
     } else {
         console.log(`[SYED MD] ${setting} not found in config.js to replace.`);
+        return false;
     }
   } catch (err) {
     console.error(`[SYED MD] Error updating ${setting} in config.js:`, err);
+    return false;
   }
 }
 
@@ -32,6 +39,9 @@ module.exports = {
   usage: '.noprefix on/off/status',
 
   async execute(sock, msg, args, extra) {
+    // Live config read takay sahi status show ho
+    delete require.cache[require.resolve(configPath)];
+    const config = require(configPath);
     const currentStatus = config.noprefix || false;
     const from = extra.from;
 
@@ -56,18 +66,23 @@ module.exports = {
     }
 
     if (option === 'on') {
-      updateConfigBoolean('noprefix', true);
-      config.noprefix = true; // Live update cache
-      return extra.reply('✅ *No-Prefix Mode is ON!*\n\nUsers can now trigger commands without typing the prefix (e.g., just type `menu` instead of `.menu`).');
+      const success = updateConfigBoolean('noprefix', true);
+      if (success) {
+        return extra.reply('✅ *No-Prefix Mode is ON!*\n\nUsers can now trigger commands without typing the prefix (e.g., just type `menu` instead of `.menu`).');
+      } else {
+        return extra.reply('❌ Error: Failed to save to config.js file.');
+      }
     }
 
     if (option === 'off') {
-      updateConfigBoolean('noprefix', false);
-      config.noprefix = false; // Live update cache
-      return extra.reply('❌ *No-Prefix Mode is OFF!*\n\nBot will strictly require the prefix to execute commands.');
+      const success = updateConfigBoolean('noprefix', false);
+      if (success) {
+        return extra.reply('❌ *No-Prefix Mode is OFF!*\n\nBot will strictly require the prefix to execute commands.');
+      } else {
+        return extra.reply('❌ Error: Failed to save to config.js file.');
+      }
     }
 
     return extra.reply('❌ Invalid option! Use `.noprefix on`, `.noprefix off`, or `.noprefix status`.');
   }
 };
-                       
