@@ -4,7 +4,7 @@ module.exports = {
   name: 'play',
   aliases: ['song', 'audio', 'ytmp3'],
   category: 'general',
-  description: 'YouTube se audio play karein (Cloud API Version)',
+  description: 'YouTube se audio play karein (Multi-API Backup Version)',
   usage: '.play surah rehman',
 
   async execute(sock, msg, args, extra) {
@@ -19,16 +19,59 @@ module.exports = {
     try {
       await extra.reply(`🔍 *Searching:* \`"${searchQuery}"\`\n⚡ YouTube se audio fetch kiya ja raha hai, thoda sabar karein...`);
 
-      // High-speed API for cloud hosting
-      const apiUrl = `https://api.nexray.eu.cc/download/ytmp3?search=${encodeURIComponent(searchQuery)}`;
-      const response = await axios.get(apiUrl);
+      let audioUrl = null;
+      let title = 'Audio File';
+      let duration = 'Unknown';
+      let success = false;
 
-      if (response.data && response.data.status && response.data.result) {
-        const audioData = response.data.result;
-        const audioUrl = audioData.downloadUrl || audioData.url;
-        const title = audioData.title || 'Audio File';
-        const duration = audioData.duration || 'Unknown';
+      // ==================== ENGINE 1 (FIRST TRY) ====================
+      try {
+        const res1 = await axios.get(`https://api.nexray.eu.cc/download/ytmp3?search=${encodeURIComponent(searchQuery)}`);
+        if (res1.data && res1.data.status && res1.data.result) {
+          const data = res1.data.result;
+          audioUrl = data.downloadUrl || data.url;
+          title = data.title || title;
+          duration = data.duration || duration;
+          if (audioUrl) success = true;
+        }
+      } catch (e) {
+        console.log("[PLAY ENGINE 1] Failed, switching to backup...");
+      }
 
+      // ==================== ENGINE 2 (BACKUP TRY) ====================
+      if (!success) {
+        try {
+          const res2 = await axios.get(`https://api.giftedtech.my.id/api/download/dlmp3?url=${encodeURIComponent(searchQuery)}`);
+          if (res2.data && res2.data.success && res2.data.result) {
+            const data = res2.data.result;
+            audioUrl = data.download_url || data.url;
+            title = data.title || title;
+            duration = data.duration || duration;
+            if (audioUrl) success = true;
+          }
+        } catch (e) {
+          console.log("[PLAY ENGINE 2] Failed, switching to secondary backup...");
+        }
+      }
+
+      // ==================== ENGINE 3 (FINAL BACKUP) ====================
+      if (!success) {
+        try {
+          const res3 = await axios.get(`https://api.botcahx.eu.org/api/download/ytmp3?url=${encodeURIComponent(searchQuery)}&apikey=QA9LwXwR`);
+          if (res3.data && res3.data.status && res3.data.result) {
+            const data = res3.data.result;
+            audioUrl = data.url || data.mp3;
+            title = data.title || title;
+            duration = data.duration || duration;
+            if (audioUrl) success = true;
+          }
+        } catch (e) {
+          console.log("[PLAY ENGINE 3] All engines failed.");
+        }
+      }
+
+      // ==================== SENDING LOGIC ====================
+      if (success && audioUrl) {
         // Info Card
         let details = `🎧 *S Y E D  -  M D  P L A Y E R*\n\n`;
         details += `📌 *Title:* ${title}\n`;
@@ -36,21 +79,21 @@ module.exports = {
         details += `🚀 *Sending Audio...*`;
         await sock.sendMessage(from, { text: details }, { quoted: msg });
 
-        // Audio Send
-        await sock.sendMessage(from, {
+        // Final Audio Message Send
+        return await sock.sendMessage(from, {
           audio: { url: audioUrl },
           mimetype: 'audio/mp4',
           ptt: false
         }, { quoted: msg });
 
       } else {
-        return extra.reply('❌ Sorry bhai! YouTube par yeh cheez nahi mili ya server down hai. Kuch der baad try karein.');
+        return extra.reply('❌ Sorry bhai! Saare high-speed download servers busy hain. Kuch der baad ya koi aur naam likh kar try karein.');
       }
 
     } catch (err) {
-      console.error('Play Command Error:', err.message);
-      return extra.reply('❌ *Error:* Audio download karne me masla aaya hai. Thodi der baad try karein.');
+      console.error('Play Command Fatal Error:', err.message);
+      return extra.reply('❌ *Error:* Request process nahi ho saki. Internet ya cloud server me temporary issue hai.');
     }
   }
 };
-            
+          
