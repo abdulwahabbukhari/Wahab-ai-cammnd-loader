@@ -3,7 +3,7 @@ const axios = require('axios');
 module.exports = {
   name: 'info',
   aliases: ['sim', 'siminfo', 'cnic'],
-  category: 'general', // Menu par show karne ke liye general set kar diya
+  category: 'general',
   description: 'Fetch SIM or CNIC information for Pakistan, India, and Brazil',
   usage: '.info [number or cnic]',
 
@@ -16,43 +16,35 @@ module.exports = {
         }, { quoted: msg });
     }
 
-    let cleanInput = args[0].replace(/[^0-9]/g, ''); // Sirf numbers filter karein
+    let cleanInput = args[0].replace(/[^0-9]/g, ''); 
     let apiUrl = '';
     let countryFlag = '';
     let countryName = '';
-    let isCnic = false;
 
-    // Logic for checking CNIC or Country Code
+    // Logic checks
     if (cleanInput.length === 13 && !cleanInput.startsWith('91') && !cleanInput.startsWith('55')) {
-        // Pakistani CNIC (13 digits standard)
         apiUrl = `https://public.codexdart.site/pak.php?num=${cleanInput}`;
         countryFlag = '🇵🇰';
-        countryName = 'Pakistan (CNIC Search)';
-        isCnic = true;
+        countryName = 'Pakistan (CNIC)';
     } else if (cleanInput.startsWith('92')) {
-        // Pakistan Number
         let pakNum = cleanInput.substring(2); 
         apiUrl = `https://public.codexdart.site/pak.php?num=${pakNum}`;
         countryFlag = '🇵🇰';
         countryName = 'Pakistan';
     } else if (cleanInput.startsWith('03') && cleanInput.length === 11) {
-        // Direct local Pak number format (e.g., 0304...)
         apiUrl = `https://public.codexdart.site/pak.php?num=${cleanInput}`;
         countryFlag = '🇵🇰';
         countryName = 'Pakistan';
-    } else if (cleanNumber.startsWith('91')) {
-        // India
+    } else if (cleanInput.startsWith('91')) {
         let indNum = cleanInput.substring(2);
         apiUrl = `https://public.codexdart.site/ind.php?num=${indNum}`;
         countryFlag = '🇮🇳';
         countryName = 'India';
     } else if (cleanInput.startsWith('55')) {
-        // Brazil
         apiUrl = `https://public.codexdart.site/brazil.php?query=${cleanInput}`;
         countryFlag = '🇧🇷';
         countryName = 'Brazil';
     } else {
-        // If user enters 10 digit local number without 92, default to Pak
         if (cleanInput.length === 10 && cleanInput.startsWith('3')) {
             apiUrl = `https://public.codexdart.site/pak.php?num=${cleanInput}`;
             countryFlag = '🇵🇰';
@@ -68,53 +60,61 @@ module.exports = {
         const response = await axios.get(apiUrl);
         const data = response.data;
 
-        if (!data || Object.keys(data).length === 0 || data.status === false || data.status === "false") {
+        if (!data || data.status === false || data.status === "false") {
             return sock.sendMessage(from, { 
                 text: `❌ No records found for this input in ${countryName} database.` 
             }, { quoted: msg });
         }
 
-        // Main Stylish Header
+        // V.I.P Header Design
         let output = `⚡ 📲  *S Y S T E M   N E T W O R K*  📲 ⚡\n`;
-        output += `┏━━━━━━━━━━━━━━━━━━━━━━━━👉\n`;
-        output += `┃ 🌍 *REGION:* ${countryFlag} ${countryName.toUpperCase()}\n`;
-        output += `┃ 📊 *STATUS:* Database Connected\n`;
-        output += `┗━━━━━━━━━━━━━━━━━━━━━━━━👉\n\n`;
+        output += `╔══════════════════════╗\n`;
+        output += `   🌍 *REGION:* ${countryFlag} ${countryName.toUpperCase()}\n`;
+        output += `   📊 *STATUS:* Cyber Live Connected\n`;
+        output += `╚══════════════════════╝\n\n`;
 
-        // Handling Records array (For Pakistan Multiple Results)
-        if (data.RECORDS && Array.isArray(data.RECORDS)) {
-            data.RECORDS.forEach((record, index) => {
-                output += ` 💠 *RECORD [0${index + 1}]* 💠\n`;
-                output += `┌───────────────────────\n`;
-                output += `│ 👤 *NAME:* ${record.name || 'N/A'}\n`;
-                output += `│ 📱 *NUMBER:* ${record.mobile || 'N/A'}\n`;
-                output += `│ 💳 *CNIC:* ${record.cnic || 'N/A'}\n`;
-                output += `│ 🏠 *ADDRESS:* ${record.address || 'N/A'}\n`;
-                output += `│ 📶 *NETWORK:* ${record.network || 'N/A'}\n`;
-                output += `└───────────────────────\n\n`;
+        // Check for Pakistani Array (handles uppercase or lowercase keys from API)
+        let recordsArray = data.RECORDS || data.records || null;
+
+        if (recordsArray && Array.isArray(recordsArray) && recordsArray.length > 0) {
+            recordsArray.forEach((record, index) => {
+                output += `📂 *[ DATA RECORD 0${index + 1} ]* ────────────────\n`;
+                output += `┌──────────────────────────────┐\n`;
+                output += `  👤 *NAME:* \`${record.name || 'N/A'}\`\n`;
+                output += `  📱 *NUMBER:* \`${record.mobile || record.number || 'N/A'}\`\n`;
+                output += `  💳 *CNIC:* \`${record.cnic || 'N/A'}\`\n`;
+                output += `  📶 *NETWORK:* \`${record.network || 'N/A'}\`\n`;
+                output += `  🏠 *ADDRESS:* \`${record.address || 'N/A'}\`\n`;
+                output += `└──────────────────────────────┘\n\n`;
             });
         } else {
-            // Fallback for India/Brazil or flat objects
-            output += ` 💠 *RESULT DETAILS* 💠\n`;
-            output += `┌───────────────────────\n`;
+            // India / Brazil or Flat Data Objects
+            output += `📂 *[ DATABASE RESULT ]* ────────────────\n`;
+            output += `┌──────────────────────────────┐\n`;
+            let hasValidData = false;
+            
             for (let key in data) {
-                // Skips the source provider text you wanted to remove
-                if (key.toLowerCase() === 'developer' || key.toLowerCase() === 'channel' || key.toLowerCase() === 'status' || key.toLowerCase() === 'count') continue;
+                let lowerKey = key.toLowerCase();
+                if (['developer', 'channel', 'status', 'count', 'records'].includes(lowerKey)) continue;
                 
-                if (typeof data[key] === 'object') {
-                    output += `│ 🔗 *${key.toUpperCase()}:* ${JSON.stringify(data[key])}\n`;
-                } else {
-                    output += `│ 🔗 *${key.toUpperCase()}:* ${data[key]}\n`;
-                }
+                hasValidData = true;
+                let val = typeof data[key] === 'object' ? JSON.stringify(data[key]) : data[key];
+                output += `  🔹 *${key.toUpperCase()}:* \`${val}\`\n`;
             }
-            output += `└───────────────────────\n\n`;
+            
+            // If the structure had data inside a flat array or something else
+            if (!hasValidData) {
+                output += `  📝 *RAW DATA:* \`${JSON.stringify(data)}\`\n`;
+            }
+            output += `└──────────────────────────────┘\n\n`;
         }
 
-        // Professional Footer Credits
-        output += `✨ ─── ❖ ── ✦ ── ❖ ─── ✨\n`;
-        output += `👑 *DEVILPOER:* Syed Abdul Wahab Bukhari\n`;
-        output += `📢 *CHANNEL:* https://whatsapp.com/channel/0029VbD1rlH5Ui2NwN6idF2v\n`;
-        output += `✨ ─── ❖ ── ✦ ── ❖ ─── ✨`;
+        // Premium Dark/Neon Style Footer Credits
+        output += `✨ 💎 👤 *DEVILPOER CREDITS* 👤 💎 ✨\n`;
+        output += `╭──────────────────────────────╮\n`;
+        output += `  👑 *DEVILPOER:* Syed Abdul Wahab Bukhari\n`;
+        output += `  📢 *CHANNEL:* https://whatsapp.com/channel/0029VbD1rlH5Ui2NwN6idF2v\n`;
+        output += `╰──────────────────────────────╯`;
 
         await sock.sendMessage(from, { text: output }, { quoted: msg });
 
@@ -126,5 +126,4 @@ module.exports = {
     }
   }
 };
-      
-                
+          
