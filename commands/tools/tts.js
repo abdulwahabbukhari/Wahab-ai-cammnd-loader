@@ -2,7 +2,7 @@ const axios = require('axios');
 
 module.exports = {
   name: 'tts',
-  category: 'general',
+  category: 'tools',
   description: 'Text To Speech (Universal Server Fix)',
   usage: '.tts [your text]',
 
