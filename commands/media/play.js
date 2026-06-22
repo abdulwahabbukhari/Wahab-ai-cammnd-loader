@@ -1,75 +1,94 @@
-const axios = require('axios');
+const { exec } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+
+// yt-search package validation
+let yts;
+try {
+    yts = require('yt-search');
+} catch {
+    console.log('[SYED MD] yt-search missing. Installing...');
+    exec('npm install yt-search');
+}
 
 module.exports = {
   name: 'play',
-  aliases: ['song', 'music'],
+  aliases: ['song', 'audio', 'ytmp3'],
   category: 'general',
-  description: 'Search and play audio from YT via Secondary CDN',
-  usage: '.play [song name]',
+  description: 'yt-dlp ke zariye local audio download karke play karein',
+  usage: '.play surah rehman',
 
   async execute(sock, msg, args, extra) {
     const from = extra.from || msg.key.remoteJid;
-    const songQuery = args.join(' ');
-
-    if (!songQuery) {
-        return sock.sendMessage(from, {
-            text: "╭━━━〔 ⚠️ *MISSING INPUT* 〕━━━👉\n┃\n┃ ⚠️ *Error:* Song name missing!\n┃ 📝 *Format:* `.play [Song Name]`\n┃\n┃ 💡 *Example:* `.play tum hi ho`\n┃\n╰━━━━━━━━━━━━━━━━━━━━━━━👉"
-        }, { quoted: msg });
+    
+    if (!args[0]) {
+      return extra.reply('🎵 *Sahi Tariqa:* \`.play surah rehman\`\n\nBatao bhai konsa audio sunna hai?');
     }
 
-    // Processing Message
-    const initialMsg = await sock.sendMessage(from, { 
-        text: `⚡ 💠 *S Y E D  M D  M U S I C* 💠 ⚡\n\n🔍 *Searching:* \`${songQuery}\`\n⏳ Please wait, fetching from backup server...` 
-    }, { quoted: msg });
+    if (!yts) {
+      return extra.reply('❌ Background dependency load ho rahi hai, 10 seconds baad dubara try karein.');
+    }
 
+    const searchQuery = args.join(' ');
+    
     try {
-      // Backup High-Speed API Network
-      const searchUrl = `https://api.sandipbaruwal.com.np/ytdl?url=${encodeURIComponent(songQuery)}`;
-      const response = await axios.get(searchUrl);
+      await extra.reply(`🔍 *Searching:* \`"${searchQuery}"\`\n⚡ yt-dlp ke zariye server par audio fetch kiya ja raha hai, thoda sabar karein...`);
+
+      // 1. YouTube search se link nikalna
+      const searchResult = await yts(searchQuery);
+      const video = searchResult.videos[0];
+
+      if (!video) {
+        return extra.reply('❌ Sorry bhai, YouTube par is naam se kuch nahi mila. Name check karke dubara try karein.');
+      }
+
+      const videoUrl = video.url;
+      const duration = video.timestamp;
       
-      if (!response.data || !response.data.video_id) {
-          // If query search fails, try secondary endpoint
-          return sock.sendMessage(from, { text: "❌ *Error:* Song not found or search server timed out. Try another keyword!" }, { quoted: msg });
-      }
+      // Temporary audio file path configuration
+      const outputFilename = `yt_${Date.now()}.mp3`;
+      const outputPath = path.join(__dirname, '../../', outputFilename);
 
-      const songData = response.data;
-      const audioLink = songData.audio_url || songData.download_url;
+      // 2. Info Card Message
+      let details = `🎧 *S Y E D  -  M D  P L A Y E R*\n\n`;
+      details += `📌 *Title:* ${video.title}\n`;
+      details += `⏱️ *Duration:* ${duration}\n\n`;
+      details += `📥 _yt-dlp engine audio extract kar raha hai..._`;
+      await sock.sendMessage(from, { text: details }, { quoted: msg });
 
-      if (!audioLink) {
-          return sock.sendMessage(from, { text: "❌ *Error:* Could not extract downloadable link for this song." }, { quoted: msg });
-      }
+      // 3. yt-dlp Local Extraction Command
+      const ytdlpCommand = `yt-dlp --extract-audio --audio-format mp3 --audio-quality 0 --output "${outputPath}" "${videoUrl}"`;
 
-      // V.I.P UI Card
-      let musicCard = `⚡ 📲  *S Y E D   M D   M U S I C*  📲 ⚡\n`;
-      musicCard += `╔══════════════════════╗\n`;
-      musicCard += `  🎵 *TITLE:* \`${songData.title || 'Unknown'}\`\n`;
-      musicCard += `  ⏱️ *DURATION:* \`${songData.duration || 'N/A'}\`\n`;
-      musicCard += `  🔗 *ID:* \`${songData.video_id}\`\n`;
-      musicCard += `╚══════════════════════╝\n\n`;
-      musicCard += `🎶 *Sending Audio Track... Enjoy!*`;
+      exec(ytdlpCommand, async (error, stdout, stderr) => {
+        if (error) {
+          console.error(`yt-dlp error: ${error.message}`);
+          return extra.reply('❌ yt-dlp download fail ho gaya! Check karein ke Termux me python, ffmpeg aur yt-dlp sahi se installed hain ya nahi.');
+        }
 
-      // Update Text Card
-      await sock.sendMessage(from, { text: musicCard, edit: initialMsg.key });
+        // 4. File existence check aur WhatsApp transfer
+        if (fs.existsSync(outputPath)) {
+          try {
+            await sock.sendMessage(from, {
+              audio: { url: outputPath },
+              mimetype: 'audio/mp4',
+              ptt: false
+            }, { quoted: msg });
 
-      // Fetch Audio Buffer from Backup CDN
-      const audioResponse = await axios.get(audioLink, { responseType: 'arraybuffer' });
-      const audioBuffer = Buffer.from(audioResponse.data);
-
-      // Final Audio message without PTT
-      await sock.sendMessage(
-        from,
-        {
-          audio: audioBuffer,
-          mimetype: 'audio/mpeg',
-          ptt: false
-        },
-        { quoted: msg }
-      );
+            // 5. Space clean karne ke liye file delete karna (Crash-Safe)
+            fs.unlinkSync(outputPath);
+          } catch (sendErr) {
+            console.error('Audio Sending Error:', sendErr.message);
+            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+          }
+        } else {
+          return extra.reply('❌ File extract toh hui par system me nahi mili. Dubara try karein.');
+        }
+      });
 
     } catch (err) {
-      console.error('Play Backup Command Error:', err.message);
-      return sock.sendMessage(from, { text: "❌ *Server Error:* Both primary and secondary music engines are overloaded. Try again in a minute!" }, { quoted: msg });
+      console.error('Play Command Internal Error:', err.message);
+      return extra.reply('❌ *Error:* Audio process karne me koi andarooni masla aaya hai.');
     }
   }
 };
-    
+                                   
