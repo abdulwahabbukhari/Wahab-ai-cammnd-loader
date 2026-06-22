@@ -87,22 +87,24 @@ const handleMessage = async (sock, msg) => {
     let contentMsg = msg.message?.ephemeralMessage?.message || msg.message?.viewOnceMessageV2?.message || msg.message;
     let body = contentMsg?.conversation || contentMsg?.extendedTextMessage?.text || contentMsg?.imageMessage?.caption || contentMsg?.videoMessage?.caption || '';
     let textMsg = body.trim();
+    if (textMsg.length === 0) return; // Empty message ko yahin rok do
     
-    // 🚀 NEW: NOPREFIX LOGIC ADDED HERE
+    // 🚀 FIXED: NOPREFIX LOGIC AND COMMAND PARSING
     let isCmd = false;
     let commandName = '';
     let args = [];
 
     if (textMsg.startsWith(activeConfig.prefix)) {
-      // With Prefix
+      // With Prefix (e.g., .menu)
       isCmd = true;
       args = textMsg.slice(activeConfig.prefix.length).trim().split(/\s+/);
       commandName = args.shift().toLowerCase();
-    } else if (activeConfig.noprefix) {
+    } else if (activeConfig.noprefix === true) {
       // Without Prefix (If enabled in config)
       let tempArgs = textMsg.trim().split(/\s+/);
       let possibleCmd = tempArgs[0]?.toLowerCase();
       
+      // Check karo kya yeh valid command ya alias hai
       let commandExists = commands.has(possibleCmd);
       if (!commandExists) {
         for (const cmd of commands.values()) {
@@ -113,6 +115,7 @@ const handleMessage = async (sock, msg) => {
         }
       }
 
+      // Agar valid command mili to isko command treat karo
       if (commandExists) {
         isCmd = true;
         commandName = possibleCmd;
@@ -121,37 +124,36 @@ const handleMessage = async (sock, msg) => {
     }
 
     // ================= 1. CHATBOT FEATURE (AI Auto Reply) =================
-    if (activeConfig.autoReply && !isFromMe && !isGroup) {
-      if (!isCmd && textMsg.length > 0) {
-        await sock.sendPresenceUpdate('composing', from);
+    // AI Chatbot tabhi chalega agar yeh koi command NAHI hai
+    if (!isCmd && activeConfig.autoReply && !isFromMe && !isGroup) {
+      await sock.sendPresenceUpdate('composing', from);
 
-        const persona = getPersona().replace(/\{name\}/g, userName);
+      const persona = getPersona().replace(/\{name\}/g, userName);
 
-        try {
-          const res = await axios.get(
-            `https://api.nexray.eu.cc/ai/gemini?text=${encodeURIComponent(persona + textMsg)}`
+      try {
+        const res = await axios.get(
+          `https://api.nexray.eu.cc/ai/gemini?text=${encodeURIComponent(persona + textMsg)}`
+        );
+        if (res.data.status && res.data.result) {
+          return await sock.sendMessage(
+            from,
+            { text: res.data.result.trim() },
+            { quoted: msg }
           );
-          if (res.data.status && res.data.result) {
-            await sock.sendMessage(
-              from,
-              { text: res.data.result.trim() },
-              { quoted: msg }
-            );
-          }
-        } catch (err) {
-          console.error('Chatbot Error: ', err.message);
         }
+      } catch (err) {
+        console.error('Chatbot Error: ', err.message);
       }
     }
 
     // ================= 2. MODE FEATURE & COMMAND EXECUTION =================
+    // Agar command nahi hai, to aagay janay ki zaroorat nahi
     if (!isCmd) return;
 
     if (activeConfig.selfMode && !isSenderOwner && !isFromMe) {
       return; 
     }
 
-    // Yahan pe direct command check kar raha hai kyunke upar args parse ho chuke hain
     const command = commands.get(commandName) || Array.from(commands.values()).find(c => c.aliases && c.aliases.includes(commandName));
     if (!command) return;
 
@@ -163,7 +165,7 @@ const handleMessage = async (sock, msg) => {
       );
     }
 
-    // Command Execute karna (Simple style, no Meta AI tags)
+    // Command Execute karna
     await command.execute(sock, msg, args, {
       from,
       sender,
@@ -206,7 +208,7 @@ const initializeAntiCall = (sock) => {
       const data = loadData();
       if (!data.enabled) return;
       
-      // 🔄 Live config read karo takay whitelist update hoti rahay
+      // Live config read karo takay whitelist update hoti rahay
       delete require.cache[require.resolve('./config')];
       const activeConfig = require('./config');
 
@@ -220,7 +222,7 @@ const initializeAntiCall = (sock) => {
         const caller = normalizeJid(call.from);
         const callerNumber = caller.split('@')[0].split(':')[0];
 
-        // 🛡️ WHITELIST CHECK: Owners aur Allowed Callers ko ignore karna hai
+        // WHITELIST CHECK: Owners aur Allowed Callers ko ignore karna hai
         const isOwner = activeConfig.ownerNumber.includes(callerNumber);
         const isAllowedCaller = (activeConfig.allowedCallers || []).includes(callerNumber);
 
@@ -271,4 +273,4 @@ module.exports = {
   initializeAntiCall,
   isOwner
 };
-    
+  
