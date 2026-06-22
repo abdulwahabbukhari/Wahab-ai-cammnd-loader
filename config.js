@@ -1,14 +1,15 @@
 module.exports = {
     // Bot Owner Configuration
     ownerNumber: ['923376539373','923049730127'],
-    ownerName: ['SYED ABDUL WAHAB BUKHARI', 'SYED-HACKER'],
+    ownerName: ['SYED ABDUL WAHAB BUKHARI', 'SYED-HACKER'],    
     allowedCallers: ['923001234567', '923111234567'],
+    
     // Bot Configuration
     botName: 'SYED MD',
     version: '1.0.0',
     prefix: '.',
+    noprefix: false,
 
-    // 🔔 CHANNEL / NEWSLETTER CONFIG
     channelId: '120363426863283917@newsletter',
 
     sessionName: 'session',
