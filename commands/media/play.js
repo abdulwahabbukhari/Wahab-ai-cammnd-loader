@@ -3,8 +3,8 @@ const axios = require('axios');
 module.exports = {
   name: 'play',
   aliases: ['song', 'music'],
-  category: 'media',
-  description: 'Search and play audio from YouTube (Stable)',
+  category: 'general',
+  description: 'Search and play audio from YT via Secondary CDN',
   usage: '.play [song name]',
 
   async execute(sock, msg, args, extra) {
@@ -17,51 +17,45 @@ module.exports = {
         }, { quoted: msg });
     }
 
-    // Processing Message with SYED MD Branding
+    // Processing Message
     const initialMsg = await sock.sendMessage(from, { 
-        text: `⚡ 💠 *S Y E D  M D  M U S I C* 💠 ⚡\n\n🔍 *Searching:* \`${songQuery}\`\n⏳ Please wait, preparing high-quality audio...` 
+        text: `⚡ 💠 *S Y E D  M D  M U S I C* 💠 ⚡\n\n🔍 *Searching:* \`${songQuery}\`\n⏳ Please wait, fetching from backup server...` 
     }, { quoted: msg });
 
     try {
-      // Step 1: YouTube Search (Stable Network)
-      const searchUrl = `https://api.vreden.web.id/api/ytsearch?query=${encodeURIComponent(songQuery)}`;
-      const searchResponse = await axios.get(searchUrl);
+      // Backup High-Speed API Network
+      const searchUrl = `https://api.sandipbaruwal.com.np/ytdl?url=${encodeURIComponent(songQuery)}`;
+      const response = await axios.get(searchUrl);
       
-      if (!searchResponse.data || !searchResponse.data.result || searchResponse.data.result.length === 0) {
-          return sock.sendMessage(from, { text: "❌ *Error:* Song not found. Check spelling!" }, { quoted: msg });
+      if (!response.data || !response.data.video_id) {
+          // If query search fails, try secondary endpoint
+          return sock.sendMessage(from, { text: "❌ *Error:* Song not found or search server timed out. Try another keyword!" }, { quoted: msg });
       }
 
-      const video = searchResponse.data.result[0];
-      const videoUrl = video.url;
+      const songData = response.data;
+      const audioLink = songData.audio_url || songData.download_url;
 
-      // Step 2: High-Speed Direct Audio Downloader API
-      const downloadUrl = `https://api.vreden.web.id/api/ytmp3?url=${encodeURIComponent(videoUrl)}`;
-      const downloadResponse = await axios.get(downloadUrl);
-
-      if (!downloadResponse.data || !downloadResponse.data.result || !downloadResponse.data.result.downloadUrl) {
-          return sock.sendMessage(from, { text: "❌ *Error:* Server cannot extract audio right now. Try again!" }, { quoted: msg });
+      if (!audioLink) {
+          return sock.sendMessage(from, { text: "❌ *Error:* Could not extract downloadable link for this song." }, { quoted: msg });
       }
-
-      const audioLink = downloadResponse.data.result.downloadUrl;
 
       // V.I.P UI Card
       let musicCard = `⚡ 📲  *S Y E D   M D   M U S I C*  📲 ⚡\n`;
       musicCard += `╔══════════════════════╗\n`;
-      musicCard += `  🎵 *TITLE:* \`${video.title || 'Unknown'}\`\n`;
-      musicCard += `  👤 *CHANNEL:* \`${video.author?.name || 'N/A'}\`\n`;
-      musicCard += `  ⏱️ *DURATION:* \`${video.timestamp || 'N/A'}\`\n`;
-      musicCard += `  🔗 *URL:* ${videoUrl}\n`;
+      musicCard += `  🎵 *TITLE:* \`${songData.title || 'Unknown'}\`\n`;
+      musicCard += `  ⏱️ *DURATION:* \`${songData.duration || 'N/A'}\`\n`;
+      musicCard += `  🔗 *ID:* \`${songData.video_id}\`\n`;
       musicCard += `╚══════════════════════╝\n\n`;
       musicCard += `🎶 *Sending Audio Track... Enjoy!*`;
 
       // Update Text Card
       await sock.sendMessage(from, { text: musicCard, edit: initialMsg.key });
 
-      // Step 3: Fetch Audio Buffer from Global CDN
+      // Fetch Audio Buffer from Backup CDN
       const audioResponse = await axios.get(audioLink, { responseType: 'arraybuffer' });
       const audioBuffer = Buffer.from(audioResponse.data);
 
-      // Final Audio message without PTT (Best for long songs)
+      // Final Audio message without PTT
       await sock.sendMessage(
         from,
         {
@@ -73,8 +67,8 @@ module.exports = {
       );
 
     } catch (err) {
-      console.error('Play Global Command Error:', err.message);
-      return sock.sendMessage(from, { text: "❌ *Server Error:* Global downloaders are rate-limited. Try again later." }, { quoted: msg });
+      console.error('Play Backup Command Error:', err.message);
+      return sock.sendMessage(from, { text: "❌ *Server Error:* Both primary and secondary music engines are overloaded. Try again in a minute!" }, { quoted: msg });
     }
   }
 };
