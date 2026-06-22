@@ -2,7 +2,7 @@ module.exports = {
     // Bot Owner Configuration
     ownerNumber: ['923376539373','923049730127'],
     ownerName: ['SYED ABDUL WAHAB BUKHARI', 'SYED-HACKER'],
-    
+    allowedCallers: ['923001234567', '923111234567'],
     // Bot Configuration
     botName: 'SYED MD',
     version: '1.0.0',
