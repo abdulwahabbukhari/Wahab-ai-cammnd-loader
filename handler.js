@@ -93,13 +93,22 @@ const handleMessage = async (sock, msg) => {
     let commandName = '';
     let args = [];
 
+    // Live No-Prefix Status Read
+    let isNoPrefixEnabled = activeConfig.noprefix;
+    try {
+      const npPath = path.join(__dirname, 'data', 'noprefix.json');
+      if (fs.existsSync(npPath)) {
+         isNoPrefixEnabled = JSON.parse(fs.readFileSync(npPath)).enabled;
+      }
+    } catch(e) {}
+
     if (textMsg.startsWith(activeConfig.prefix)) {
       // With Prefix
       isCmd = true;
       args = textMsg.slice(activeConfig.prefix.length).trim().split(/\s+/);
       commandName = args.shift().toLowerCase();
-    } else if (activeConfig.noprefix) {
-      // Without Prefix (If enabled in config)
+    } else if (isNoPrefixEnabled) {
+      // Without Prefix (If enabled in config or json)
       let tempArgs = textMsg.trim().split(/\s+/);
       let possibleCmd = tempArgs[0]?.toLowerCase();
       
@@ -206,7 +215,6 @@ const initializeAntiCall = (sock) => {
       const data = loadData();
       if (!data.enabled) return;
       
-      // 🔄 Live config read karo takay whitelist update hoti rahay
       delete require.cache[require.resolve('./config')];
       const activeConfig = require('./config');
 
@@ -220,9 +228,9 @@ const initializeAntiCall = (sock) => {
         const caller = normalizeJid(call.from);
         const callerNumber = caller.split('@')[0].split(':')[0];
 
-        // 🛡️ WHITELIST CHECK: Owners aur Allowed Callers ko ignore karna hai
+        // 🛡️ WHITELIST CHECK: Owners aur JSON-based Allowed Callers
         const isOwner = activeConfig.ownerNumber.includes(callerNumber);
-        const isAllowedCaller = (activeConfig.allowedCallers || []).includes(callerNumber);
+        const isAllowedCaller = (data.allowed || []).includes(callerNumber); // 👈 JSON CHECK
 
         if (isOwner || isAllowedCaller) {
           console.log(`[🛡️ SYED MD] Call bypassed for whitelisted number: ${callerNumber}`);
