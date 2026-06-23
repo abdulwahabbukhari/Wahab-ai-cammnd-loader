@@ -86,7 +86,7 @@ module.exports = {
         finalResponse += `────────────────────\n`;
       }
       
-      finalResponse += `Powered by *Marco Malik*`;
+      finalResponse += `Powered by *SYED ABDUL WAHAB BUKHARI*`;
 
       return await sock.sendMessage(from, { text: finalResponse }, { quoted: msg });
 
