@@ -18,7 +18,7 @@ if (fs.existsSync('./.env')) {
 }
 
 // =========================================================================
-// 🌐 SYED-MD LIVE MULTI-USER PAIRING CODE WEB SERVER (GLASSMORPHISM THEME)
+// 🌐 SYED-MD LIVE MULTI-USER PAIRING CODE WEB SERVER (PREMIUM UPGRADED)
 // =========================================================================
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -26,10 +26,7 @@ const PORT = process.env.PORT || 8080;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Global reference socket کنکشن کو ویب سرور کے ساتھ بائنڈ کرنے کے لیے
-let globalSock = null;
-
-// 1. فرنٹ اینڈ ویب سائٹ کا انٹرفیس
+// 1. فرنٹ اینڈ ویب سائٹ کا پریمیم انٹرفیس (Glassmorphism + Ultra Tech Aesthetic)
 app.get('/', (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -37,83 +34,104 @@ app.get('/', (req, res) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>SYED-MD Multi-Device Pairing</title>
+        <title>SYED-MD Professional Multi-Device Pairing Portal</title>
         <style>
+            @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Poppins:wght@300;400;600&display=swap');
             * { box-sizing: border-box; margin: 0; padding: 0; }
             body { 
-                background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); 
+                background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%); 
                 color: #f8fafc; 
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                font-family: 'Poppins', sans-serif; 
                 display: flex; 
                 justify-content: center; 
                 align-items: center; 
                 min-height: 100vh;
                 padding: 20px;
+                overflow: hidden;
             }
+            /* Background tech-grid effect */
+            body::before {
+                content: ""; position: absolute; width: 200%; height: 200%;
+                background-image: linear-gradient(rgba(56, 189, 248, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 189, 248, 0.03) 1px, transparent 1px);
+                background-size: 30px 30px; z-index: -1; animation: move 120s linear infinite;
+            }
+            @keyframes move { from { transform: translate(0,0); } to { transform: translate(-50%, -50%); } }
+            
             .container { 
-                background: rgba(255, 255, 255, 0.03); 
-                backdrop-filter: blur(12px); 
-                -webkit-backdrop-filter: blur(12px);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                padding: 40px 30px; 
-                border-radius: 20px; 
+                background: rgba(15, 23, 42, 0.45); 
+                backdrop-filter: blur(20px); 
+                -webkit-backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                padding: 45px 35px; 
+                border-radius: 24px; 
                 width: 100%;
-                max-width: 450px;
+                max-width: 460px;
                 text-align: center; 
-                box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px rgba(56, 189, 248, 0.05); 
             }
-            h1 { font-size: 28px; margin-bottom: 10px; font-weight: 800; letter-spacing: 2px; color: #38bdf8; }
-            p { font-size: 14px; color: #94a3b8; margin-bottom: 25px; line-height: 1.5; }
-            .input-group { position: relative; margin-bottom: 20px; }
+            h1 { font-family: 'Orbitron', sans-serif; font-size: 32px; margin-bottom: 8px; font-weight: 800; letter-spacing: 4px; color: #38bdf8; text-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+            p { font-size: 13px; color: #94a3b8; margin-bottom: 30px; line-height: 1.6; letter-spacing: 0.5px; }
+            .input-group { position: relative; margin-bottom: 25px; }
             input { 
                 width: 100%; 
-                padding: 14px; 
-                border-radius: 10px; 
-                border: 1px solid rgba(255, 255, 255, 0.15); 
-                background: rgba(15, 23, 42, 0.6); 
+                padding: 16px; 
+                border-radius: 12px; 
+                border: 1px solid rgba(255, 255, 255, 0.1); 
+                background: rgba(15, 23, 42, 0.8); 
                 color: #fff; 
                 font-size: 16px; 
                 text-align: center; 
                 outline: none;
-                transition: 0.3s;
+                transition: all 0.4s ease;
+                font-family: 'Orbitron', sans-serif;
+                letter-spacing: 1px;
             }
-            input:focus { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
+            input:focus { border-color: #a855f7; box-shadow: 0 0 20px rgba(168, 85, 247, 0.25); background: rgba(15, 23, 42, 0.9); }
             button { 
-                background: linear-gradient(90deg, #2563eb, #3b82f6); 
+                background: linear-gradient(135deg, #3b82f6, #8b5cf6); 
                 color: white; 
                 border: none; 
-                padding: 14px; 
+                padding: 16px; 
                 width: 100%;
-                font-size: 16px; 
-                font-weight: bold;
-                border-radius: 10px; 
+                font-size: 15px; 
+                font-weight: 600;
+                border-radius: 12px; 
                 cursor: pointer; 
-                transition: 0.3s;
-                box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 20px rgba(139, 92, 246, 0.25);
+                letter-spacing: 1px;
+                text-transform: uppercase;
             }
-            button:hover { background: linear-gradient(90deg, #1d4ed8, #2563eb); transform: translateY(-1px); }
-            .footer { margin-top: 25px; font-size: 11px; color: #64748b; }
-            .footer span { color: #38bdf8; font-weight: bold; }
+            button:hover { background: linear-gradient(135deg, #2563eb, #7c3aed); transform: translateY(-2px); box-shadow: 0 6px 25px rgba(139, 92, 246, 0.4); }
+            .footer { margin-top: 35px; font-size: 12px; color: #64748b; letter-spacing: 0.5px; }
+            .footer .brand-name { 
+                font-family: 'Orbitron', sans-serif;
+                font-weight: 800;
+                background: linear-gradient(120deg, #38bdf8, #c084fc);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                text-shadow: 0 0 10px rgba(192, 132, 252, 0.2);
+            }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>⚡ S Y E D - M D ⚡</h1>
-            <p>Enter your phone number with country code to link your bot instantly.</p>
+            <h1>⚡ SYED-MD ⚡</h1>
+            <p>Link your device seamlessly using your phone number via secure runtime terminal.</p>
             <form action="/pair" method="POST">
                 <div class="input-group">
                     <input type="text" name="number" placeholder="e.g. 923001234567" required>
                 </div>
-                <button type="submit">Generate Pairing Code</button>
+                <button type="submit">Initialize Pairing</button>
             </form>
-            <div class="footer">Powered by <span>Syed Abdul Wahab Bukhari</span></div>
+            <div class="footer">Powered by <span class="brand-name">Syed Abdul Wahab Bukhari</span></div>
         </div>
     </body>
     </html>
     `);
 });
 
-// 2. لائیو پیئرنگ کوڈ ریکویسٹ پروسیسنگ ہینڈلر
+// 2. محفوظ ملٹی یوزر پیئرنگ کوڈ جنریٹر اور ویلکم میسج ٹرگر (Isolation Method)
 app.post('/pair', async (req, res) => {
     let num = req.body.number.replace(/[^0-9]/g, '');
     if (!num) {
@@ -125,53 +143,89 @@ app.post('/pair', async (req, res) => {
         `);
     }
 
-    try {
-        if (globalSock) {
-            // واٹس ایپ سے لائیو پیئرنگ کوڈ کی ریکویسٹ
-            let code = await globalSock.requestPairingCode(num);
-            let formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
+    const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+    
+    // آئسولیٹڈ عارضی فولڈر سیشن پروسیسنگ کے لیے
+    const tempAuthFolder = path.join(__dirname, `./temp_auth_${num}`);
+    const { state } = await useMultiFileAuthState(tempAuthFolder);
+    const { version } = await fetchLatestBaileysVersion();
 
-            res.send(`
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Your Pairing Code - SYED-MD</title>
-                <style>
-                    body { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: #f8fafc; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-                    .card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); padding: 40px; border-radius: 20px; text-align: center; max-width: 450px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-                    h2 { color: #94a3b8; font-size: 18px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
-                    .code-display { background: rgba(34, 197, 94, 0.1); border: 1px dashed #22c55e; color: #22c55e; font-size: 32px; font-weight: bold; padding: 15px 25px; border-radius: 10px; margin: 20px 0; letter-spacing: 3px; display: inline-block; }
-                    p { color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 25px; }
-                    a { color: #38bdf8; text-decoration: none; font-weight: bold; font-size: 15px; }
-                    a:hover { text-decoration: underline; }
-                </style>
-            </head>
-            <body>
-                <div class="card">
-                    <h2>Your Pairing Code Below:</h2>
-                    <div class="code-display">${formattedCode}</div>
-                    <p>Go to WhatsApp -> Linked Devices -> Link with Phone Number, and enter this specific code to start <b>SYED-MD</b>.</p>
-                    <a href="/">← Link Another Number</a>
-                </div>
-            </body>
-            </html>
-            `);
-        } else {
-            res.send(`
-                <body style="background:#0f172a; color:#eab308; font-family:sans-serif; text-align:center; padding-top:100px;">
-                    <h2>⚠️ Engine Initializing! Bot is sleeping or starting up, please refresh after 10 seconds.</h2>
-                    <br><a href="/" style="color:#38bdf8; text-decoration:none;">← Try Again</a>
-                </body>
-            `);
-        }
+    try {
+        const tempSock = makeWASocket({
+            version,
+            logger: pino({ level: 'silent' }),
+            printQRInTerminal: false,
+            browser: ['Mac OS', 'Chrome', '110.0.5481.100'],
+            auth: state
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        let code = await tempSock.requestPairingCode(num);
+        let formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
+
+        // 🟢 دھماکے دار لاجک: جیسے ہی کنکشن اوپن ہو، یوزر کو ڈائریکٹ ویلکم میسج بھیجو
+        tempSock.ev.on('connection.update', async (update) => {
+            const { connection } = update;
+            if (connection === 'open') {
+                console.log(chalk.green(`🎉 [WELCOME SYSTEM] User ${num} paired successfully!`));
+                
+                const welcomeTemplate = `✨ *W E L C O M E  TO  S Y E D - M D* ✨\n\n` +
+                                        `👋 Salam! Your device has been successfully linked to *SYED-MD Chatbot Engine*.\n\n` +
+                                        `🚀 *Type:* \`.menu\` in your chat to explore all functions.\n\n` +
+                                        `🛡️ _Your session is safe and completely isolated._\n` +
+                                        `⚡ _Powered by Syed Abdul Wahab Bukhari_`;
+                
+                // یوزر کے اپنے ڈی ایم (DM) میں پہلا ویلکم میسج بھیجنا
+                await tempSock.sendMessage(`${num}@s.whatsapp.net`, { text: welcomeTemplate });
+            }
+        });
+
+        // کلین اپ سیشن ٹائم آؤٹ
+        setTimeout(() => {
+            try { fs.rmSync(tempAuthFolder, { recursive: true, force: true }); } catch (e) {}
+        }, 40000);
+
+        res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Your Security Code - SYED-MD</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Poppins:wght@300;400;600&display=swap');
+                body { background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%); color: #f8fafc; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+                .card { background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.07); padding: 40px; border-radius: 24px; text-align: center; max-width: 450px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); }
+                h2 { color: #94a3b8; font-size: 15px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
+                .code-display { font-family: 'Orbitron', sans-serif; background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.3); color: #4ade80; font-size: 32px; font-weight: bold; padding: 18px 28px; border-radius: 14px; margin: 25px 0; letter-spacing: 4px; display: inline-block; text-shadow: 0 0 10px rgba(74, 222, 128, 0.3); }
+                .status-tag { color: #eab308; font-size: 12px; margin-top: -10px; margin-bottom: 20px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
+                p { color: #94a3b8; font-size: 13px; line-height: 1.6; margin-bottom: 30px; }
+                .btn-link { display: inline-block; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 24px; border-radius: 10px; color: #38bdf8; text-decoration: none; font-weight: bold; font-size: 14px; transition: all 0.3s ease; }
+                .btn-link:hover { background: rgba(56, 189, 248, 0.1); border-color: #38bdf8; transform: translateY(-1px); }
+                .footer { margin-top: 30px; font-size: 11px; color: #64748b; font-family: 'Orbitron', sans-serif; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h2>Your Pairing Code Below:</h2>
+                <div class="code-display">${formattedCode}</div>
+                <div class="status-tag">🔄 Connected Status: Pending Pairing...</div>
+                <p>Go to WhatsApp -> Linked Devices -> Link with Phone Number, and enter this security key to activate.</p>
+                <a href="/" class="btn-link">← Use Another Number</a>
+                <div class="footer">SYED-MD BY WAHAB BUKHARI</div>
+            </div>
+        </body>
+        </html>
+        `);
+
     } catch (err) {
         console.error('Web UI Pairing Error:', err.message);
+        try { fs.rmSync(tempAuthFolder, { recursive: true, force: true }); } catch (e) {}
         res.send(`
             <body style="background:#0f172a; color:#ef4444; font-family:sans-serif; text-align:center; padding-top:100px;">
                 <h2>❌ Error: ${err.message}</h2>
-                <p style="color:#94a3b8;">If this number is already linked or active, logout first.</p>
+                <p style="color:#94a3b8;">Please wait 15 seconds and try again.</p>
                 <br><a href="/" style="color:#38bdf8; text-decoration:none;">← Go Back</a>
             </body>
         `);
@@ -182,7 +236,6 @@ app.post('/pair', async (req, res) => {
 app.listen(PORT, () => {
     console.log(chalk.bold.green(`\n🌐 [WEB SERVER] SYED-MD UI Live on Port: ${PORT}`));
 });
-// =========================================================================
 
 // =======================
 // ERROR SUPPRESSION (LAG FIX)
@@ -239,20 +292,18 @@ async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
   const { version } = await fetchLatestBaileysVersion();
 
-  // 2. Socket Initialization
+  // 2. Socket Initialization (ANTI-BAN UPDATED BROWSER)
   const sock = makeWASocket({
     version,
     logger: pino({ level: 'silent' }),
     printQRInTerminal: false,
-    browser: ['Ubuntu', 'Chrome', '20.0.04'],
+    browser: ['Mac OS', 'Chrome', '110.0.5481.100'],
     auth: state,
     syncFullHistory: false,
     generateHighQualityLinkPreview: false,
+    connectTimeoutMs: 60000,
     getMessage: async () => undefined 
   });
-
-  // 🔗 ساکٹ اب گلوبل ویریبل میں بائنڈ ہو گیا تاکہ ایکسپریس ویب سائٹ اسے استعمال کر سکے
-  globalSock = sock;
 
   // 3. AUTO TERMINAL LOG FOR SERVER STATUS
   if (!sock.authState.creds.registered) {
@@ -365,3 +416,4 @@ setInterval(() => {
     if (global.gc) global.gc();
   } catch {}
 }, 30 * 60 * 1000);
+      
