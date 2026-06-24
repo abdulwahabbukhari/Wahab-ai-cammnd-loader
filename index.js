@@ -1,6 +1,6 @@
 /* ================================================================
-   🚀 SYED-MD CHATBOT ENGINE (CRYSTAL SPEED EDITION - STABLE STORAGE)
-   ⚡ 1. ULTRA-FAST PAIRING ENGINE (Safe /tmp Path Routing)
+   🚀 SYED-MD CHATBOT ENGINE (CRYSTAL SPEED EDITION - PERFECT FIX)
+   ⚡ 1. ULTRA-FAST PAIRING ENGINE (Instant Synchronous Generation)
    🎨 2. 3D ANIMATED PORTAL UI (Professional Look)
    🛡️ 3. ANTI-BAN PROTECTION (Isolated Sandboxing)
    🎉 4. AUTOMATIC WELCOME MESSAGE SYSTEM (DM Injector)
@@ -39,7 +39,7 @@ app.get('/', (req, res) => {
         <title>SYED-MD | Crystal Speed</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Poppins:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=600;900&family=Poppins:wght=400;600&display=swap');
             body { 
                 background: #020202; 
                 color: #fff; 
@@ -152,20 +152,20 @@ app.get('/', (req, res) => {
 });
 
 // =========================================================================
-// 🛡️ [KAM 2 & 4]: HIGH-SPEED /tmp STORAGE BASED PAIR ROUTE
+// 🛡️ [KAM 2 & 4]: HIGH-SPEED SYNCHRONOUS PAIR ROUTE
 // =========================================================================
 app.get('/pair', async (req, res) => {
     let num = req.query.number;
     if (!num) return res.json({ error: "Number is required" });
     num = num.replace(/[^0-9]/g, '');
 
-    // Using Linux local absolute temporary execution environment path
-    const tempAuthFolder = path.join('/tmp', 'baileys_auth_' + num);
+    const tempAuthFolder = path.join(__dirname, 'session_' + num);
     
     try {
-        if (!fs.existsSync(tempAuthFolder)) {
-            fs.mkdirSync(tempAuthFolder, { recursive: true });
+        if (fs.existsSync(tempAuthFolder)) {
+            fs.rmSync(tempAuthFolder, { recursive: true, force: true });
         }
+        fs.mkdirSync(tempAuthFolder, { recursive: true });
 
         const { state, saveCreds } = await useMultiFileAuthState(tempAuthFolder);
         
@@ -177,35 +177,29 @@ app.get('/pair', async (req, res) => {
             browser: ['Chrome', 'Windows', '10'] 
         });
 
+        // Background handler for authorization updates
         sock.ev.on('creds.update', saveCreds);
 
-        // Allow socket options to lock instance state properties safely
-        await delay(2000);
-
-        if (sock.authState && sock.authState.creds) {
-            let code = await sock.requestPairingCode(num);
-            if (code) {
-                return res.json({ code: code });
-            }
-        }
+        // [CRITICAL FIX]: Directly fetching pairing code without wrapping inside connection.update
+        await delay(2500); // 2.5 seconds loop block for core runtime architecture sync
         
-        res.json({ error: "Token key synchronization drops. Try again." });
+        if (!sock.authState.creds.registered) {
+            let code = await sock.requestPairingCode(num);
+            if (code && !res.headersSent) {
+                res.json({ code: code });
+            } else {
+                if (!res.headersSent) res.json({ error: "Failed to fetch pairing code from WhatsApp servers." });
+            }
+        } else {
+            if (!res.headersSent) res.json({ error: "Active session already running." });
+        }
 
-        // =========================================================================
-        // 🎉 [KAM 3]: AUTOMATIC WELCOME MESSAGE TRIGGER
-        // =========================================================================
+        // Handle successful linkage and welcome notification separately in background
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect } = update;
-            
             if (connection === 'open') {
-                console.log(`[SUCCESS] Device ${num} linked via secure dynamic execution path.`);
-                
-                const welcomeText = `✨ *W E L C O M E  TO  S Y E D - M D* ✨\n\n` +
-                                    `👋 Salam! Your device has been successfully linked to *Core Engine*.\n\n` +
-                                    `🚀 *Type:* \`.menu\` in your chat to explore all functions.\n\n` +
-                                    `🛡️ _Your session is safe and completely isolated._\n` +
-                                    `⚡ _Powered by Syed Abdul Wahab Bukhari_`;
-                
+                console.log(`[SUCCESS] Device ${num} linked successfully.`);
+                const welcomeText = `✨ *W E L C O M E  TO  S Y E D - M D* ✨\n\n👋 Salam! Your device has been successfully linked to *Core Engine*.\n\n🚀 *Type:* \`.menu\` in your chat to explore all functions.\n\n🛡️ _Your session is safe and completely isolated._\n⚡ _Powered by Syed Abdul Wahab Bukhari_`;
                 await sock.sendMessage(`${num}@s.whatsapp.net`, { text: welcomeText });
                 await delay(2000); 
                 sock.logout();
@@ -215,19 +209,15 @@ app.get('/pair', async (req, res) => {
                 const isLoggedOut = lastDisconnect?.error?.output?.statusCode === DisconnectReason.loggedOut;
                 if (!isLoggedOut) {
                     setTimeout(() => {
-                        try {
-                            if (fs.existsSync(tempAuthFolder)) {
-                                fs.rmSync(tempAuthFolder, { recursive: true, force: true });
-                            }
-                        } catch(e) {}
-                    }, 10000);
+                        try { if (fs.existsSync(tempAuthFolder)) fs.rmSync(tempAuthFolder, { recursive: true, force: true }); } catch(e) {}
+                    }, 5000);
                 }
             }
         });
 
     } catch (err) {
-        console.log('Error during pairing process:', err);
-        res.json({ error: "Sandbox initialization error: " + err.message });
+        console.log('Core Process Failure:', err);
+        if (!res.headersSent) res.json({ error: "Sandbox initialization error: " + err.message });
     }
 });
 
@@ -244,4 +234,4 @@ server.keepAliveTimeout = 0;
 setInterval(() => {
     try { if (global.gc) global.gc(); } catch (e) {}
 }, 30 * 60 * 1000);
-        
+                        
