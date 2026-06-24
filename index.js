@@ -1,5 +1,5 @@
 /* ================================================================
-   🚀 SYED-MD CHATBOT ENGINE (CRYSTAL SPEED EDITION - ZERO DELAY)
+   🚀 SYED-MD CHATBOT ENGINE (CRYSTAL SPEED EDITION - COMPLETE)
    ⚡ 1. ULTRA-FAST PAIRING ENGINE (Instant Code Generation)
    🎨 2. 3D ANIMATED PORTAL UI (Professional Look)
    🛡️ 3. ANTI-BAN PROTECTION (Isolated Sandboxing)
@@ -166,7 +166,7 @@ app.get('/pair', async (req, res) => {
         const { state, saveCreds } = await useMultiFileAuthState(tempAuthFolder);
         
         const sock = makeWASocket({
-            version: [2, 3000, 1015698762], // Static direct version to bypass check delay
+            version: [2, 3000, 1015698762], // Static version to bypass network sync wait
             auth: state,
             printQRInTerminal: false,
             logger: pino({ level: 'fatal' }),
@@ -174,7 +174,6 @@ app.get('/pair', async (req, res) => {
         });
 
         if (!sock.authState.creds.registered) {
-            // High-speed execution bypasses unnecessary network delay loops
             const code = await sock.requestPairingCode(num);
             res.json({ code: code });
         } else {
@@ -200,7 +199,7 @@ app.get('/pair', async (req, res) => {
                 
                 await sock.sendMessage(`${num}@s.whatsapp.net`, { text: welcomeText });
                 
-                await delay(2000); // Small delivery buffer
+                await delay(2000); 
                 sock.logout();
             }
 
@@ -230,7 +229,7 @@ async function startMainBot() {
     const mainSessionPath = path.join(__dirname, 'session');
     if (!fs.existsSync(mainSessionPath)) return;
 
-    console.log("\x1b[36m[🤖 MAIN ENGINE] Booting backend runtime protocols...\x1b[0m");
+    console.log("\x1b[36m[🤖 MAIN ENGINE] Booting background runtime protocols...\x1b[0m");
     const { state, saveCreds } = await useMultiFileAuthState(mainSessionPath);
     
     globalSock = makeWASocket({
@@ -267,10 +266,16 @@ async function startMainBot() {
     });
 }
 
-app.listen(PORT, () => {
+// =========================================================================
+// 🤖 SERVER INITIALIZATION (DYNAMIC PORT FIX & BINDING FOR RAILWAY)
+// =========================================================================
+const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n\x1b[35m🌐 [SERVER] Portal cluster operational on interface port: ${PORT}\x1b[0m`);
     startMainBot().catch(err => console.log('Main Execution Interrupted:', err.message));
 });
+
+server.timeout = 0;
+server.keepAliveTimeout = 0;
 
 // =========================================================================
 // 🧹 [BONUS]: RAM GC MEMORY FLUSHER DEPLOYMENT
@@ -280,4 +285,4 @@ setInterval(() => {
         if (global.gc) global.gc();
     } catch (e) {}
 }, 30 * 60 * 1000);
-   
+             
