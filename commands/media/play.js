@@ -1,99 +1,99 @@
+
+
+const yts = require('yt-search');
 const axios = require('axios');
+const config = require('../../config'); // Bhai ke bot ka config path
 
 module.exports = {
-  name: 'play',
-  aliases: ['song', 'audio', 'ytmp3'],
-  category: 'general',
-  description: 'YouTube se audio play karein (Multi-API Backup Version)',
-  usage: '.play surah rehman',
+    name: 'play',
+    aliases: ['ytplay', 'song', 'sound', 'music'],
+    category: 'media',
+    description: 'Download and play YouTube music',
+    usage: '.play <song name>',
 
-  async execute(sock, msg, args, extra) {
-    const from = extra.from || msg.key.remoteJid;
-    
-    if (!args[0]) {
-      return extra.reply('🎵 *Sahi Tariqa:* \`.play surah rehman\`\n\nBatao bhai konsa audio sunna hai?');
-    }
-
-    const searchQuery = args.join(' ');
-    
-    try {
-      await extra.reply(`🔍 *Searching:* \`"${searchQuery}"\`\n⚡ YouTube se audio fetch kiya ja raha hai, thoda sabar karein...`);
-
-      let audioUrl = null;
-      let title = 'Audio File';
-      let duration = 'Unknown';
-      let success = false;
-
-      // ==================== ENGINE 1 (FIRST TRY) ====================
-      try {
-        const res1 = await axios.get(`https://api.nexray.eu.cc/download/ytmp3?search=${encodeURIComponent(searchQuery)}`);
-        if (res1.data && res1.data.status && res1.data.result) {
-          const data = res1.data.result;
-          audioUrl = data.downloadUrl || data.url;
-          title = data.title || title;
-          duration = data.duration || duration;
-          if (audioUrl) success = true;
-        }
-      } catch (e) {
-        console.log("[PLAY ENGINE 1] Failed, switching to backup...");
-      }
-
-      // ==================== ENGINE 2 (BACKUP TRY) ====================
-      if (!success) {
+    async execute(sock, msg, args, extra) {
         try {
-          const res2 = await axios.get(`https://api.giftedtech.my.id/api/download/dlmp3?url=${encodeURIComponent(searchQuery)}`);
-          if (res2.data && res2.data.success && res2.data.result) {
-            const data = res2.data.result;
-            audioUrl = data.download_url || data.url;
-            title = data.title || title;
-            duration = data.duration || duration;
-            if (audioUrl) success = true;
-          }
-        } catch (e) {
-          console.log("[PLAY ENGINE 2] Failed, switching to secondary backup...");
+            const prefix = config.prefix || '.';
+            const botName = config.botName ? config.botName.toUpperCase() : 'BOT';
+            const text = Array.isArray(args) ? args.join(" ") : String(args || '');
+
+            // 1. Check if song name is provided
+            if (!text) {
+                let errOpt = {
+                    text: `🎧 *${botName} MUSIC*\n\n┌─❖\n│ ✦ Need a song name!\n│ ✦ Example: ${prefix}play faded alan walker\n└───────────────◉\n\n🎶 Your personal music downloader`
+                };
+                return await sock.sendMessage(extra.from, errOpt, { quoted: msg });
+            }
+
+            // Reaction: Searching
+            await sock.sendMessage(extra.from, { react: { text: "🔍", key: msg.key } });
+
+            // 2. YouTube Search
+            const { videos } = await yts(text);
+            if (!videos || videos.length === 0) {
+                await sock.sendMessage(extra.from, { react: { text: "😔", key: msg.key } });
+                let notFoundOpt = { 
+                    text: "❌ *No Results Found*\n\nI couldn't find any songs with that name.\n💡 Try different keywords or check spelling!"
+                };
+                return await sock.sendMessage(extra.from, notFoundOpt, { quoted: msg });
+            }
+
+            const video = videos[0];
+            
+            // 3. VIP Thumbnail Message (Processing)
+            let thumbOpt = {
+                image: { url: video.thumbnail },
+                caption: `✅ *Song Found!*\n\n🎵 *${video.title}*\n⏱️ ${video.timestamp} | 👁️ ${video.views}\n\n⬇️ Downloading audio...`
+            };
+
+            let processingMsg = await sock.sendMessage(extra.from, thumbOpt, { quoted: msg });
+            await sock.sendMessage(extra.from, { react: { text: "⬇️", key: msg.key } });
+
+            // 4. API Call for Audio Download
+            const apiUrl = `https://yt-dl.officialhectormanuel.workers.dev/?url=${encodeURIComponent(video.url)}`;
+            const response = await axios.get(apiUrl);
+            const data = response.data;
+
+            if (!data?.status || !data.audio) {
+                await sock.sendMessage(extra.from, { react: { text: "😢", key: msg.key } });
+                let failOpt = { 
+                    text: "🚫 *Download Failed*\n\nThe audio service is currently unavailable.\n⚡ Try again in a few minutes!", 
+                    edit: processingMsg.key // Edit previous processing message
+                };
+                return await sock.sendMessage(extra.from, failOpt);
+            }
+
+            await sock.sendMessage(extra.from, { react: { text: "🎧", key: msg.key } });
+
+            // 5. Download Audio as Buffer for Safe Streaming
+            const audioStream = await axios.get(data.audio, { responseType: 'arraybuffer' });
+            const audioBuffer = Buffer.from(audioStream.data, 'binary');
+
+            // 6. Send Audio with VIP External Ad Reply (No Meta Flags)
+            let audioOpt = {
+                audio: audioBuffer,
+                mimetype: "audio/mpeg", 
+                fileName: `🎵 ${(data.title || video.title).substring(0, 50)}.mp3`,
+                contextInfo: {
+                    mentionedJid: [extra.sender],
+                    externalAdReply: {
+                        title: `🎧 ${botName} Music`,
+                        body: video.title,
+                        thumbnailUrl: video.thumbnail,
+                        sourceUrl: video.url,
+                        mediaType: 1,
+                        renderLargerThumbnail: true // Spotify VIP Look
+                    }
+                }
+            };
+
+            await sock.sendMessage(extra.from, audioOpt, { quoted: msg });
+            await sock.sendMessage(extra.from, { react: { text: "✅", key: msg.key } });
+
+        } catch (error) {
+            console.error('Error in play command:', error);
+            await sock.sendMessage(extra.from, { react: { text: "💀", key: msg.key } });
+            await extra.reply("💥 *Oops! Something broke*\n\n❌ An unexpected error occurred\n🔧 Our team has been notified\n💫 Try again in a few minutes");
         }
-      }
-
-      // ==================== ENGINE 3 (FINAL BACKUP) ====================
-      if (!success) {
-        try {
-          const res3 = await axios.get(`https://api.botcahx.eu.org/api/download/ytmp3?url=${encodeURIComponent(searchQuery)}&apikey=QA9LwXwR`);
-          if (res3.data && res3.data.status && res3.data.result) {
-            const data = res3.data.result;
-            audioUrl = data.url || data.mp3;
-            title = data.title || title;
-            duration = data.duration || duration;
-            if (audioUrl) success = true;
-          }
-        } catch (e) {
-          console.log("[PLAY ENGINE 3] All engines failed.");
-        }
-      }
-
-      // ==================== SENDING LOGIC ====================
-      if (success && audioUrl) {
-        // Info Card
-        let details = `🎧 *S Y E D  -  M D  P L A Y E R*\n\n`;
-        details += `📌 *Title:* ${title}\n`;
-        details += `⏱️ *Duration:* ${duration}\n\n`;
-        details += `🚀 *Sending Audio...*`;
-        await sock.sendMessage(from, { text: details }, { quoted: msg });
-
-        // Final Audio Message Send
-        return await sock.sendMessage(from, {
-          audio: { url: audioUrl },
-          mimetype: 'audio/mp4',
-          ptt: false
-        }, { quoted: msg });
-
-      } else {
-        return extra.reply('❌ Sorry bhai! Saare high-speed download servers busy hain. Kuch der baad ya koi aur naam likh kar try karein.');
-      }
-
-    } catch (err) {
-      console.error('Play Command Fatal Error:', err.message);
-      return extra.reply('❌ *Error:* Request process nahi ho saki. Internet ya cloud server me temporary issue hai.');
     }
-  }
 };
-          
