@@ -1,201 +1,227 @@
-/* ================================================================
-   🚀 SYED-MD CHATBOT ENGINE (CRYSTAL SPEED EDITION - COMPLETE RE-ENGINEER)
-   ⚡ 1. ULTRA-FAST PAIRING ENGINE (Creds-Flush Enforcement)
-   🎨 2. 3D ANIMATED PORTAL UI (Professional Look)
-   🛡️ 3. ANTI-BAN PROTECTION (Isolated Sandboxing)
-   🎉 4. AUTOMATIC WELCOME MESSAGE SYSTEM (DM Injector)
-   🧹 BONUS: AUTOMATIC SILENT RAM CLEANER
-   ⚡ Powered by Syed Abdul Wahab Bukhari (Marco Malik)
-   ================================================================
-*/
-
-const express = require('express');
+const http = require('http');
 const pino = require('pino');
+const chalk = require('chalk');
+const readline = require('readline');
 const fs = require('fs');
 const path = require('path');
-const { 
-    default: makeWASocket, 
-    useMultiFileAuthState,
-    DisconnectReason, 
-    delay
-} = require('@whiskeysockets/baileys');
+const config = require('./config');
+const handler = require('./handler');
 
-const app = express();
-const PORT = process.env.PORT || 8080;
+// =======================
+// AUTO LOAD .ENV FILE
+// =======================
+if (fs.existsSync('./.env')) {
+  const envConfig = fs.readFileSync('./.env', 'utf8').split('\n');
+  envConfig.forEach(line => {
+    const match = line.match(/^([^=]+)=(.*)$/);
+    if (match) process.env[match[1].trim()] = match[2].trim();
+  });
+}
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ðŸŒ KOYEB / PM2 DEPLOYMENT FIX: Dummy Server
+http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end('WAHAB-AI Bot is Running perfectly!');
+}).listen(process.env.PORT || 8080);
 
-// =========================================================================
-// 🎨 [KAM 1]: 3D ANIMATED PORTAL FRONT-END Layout
-// =========================================================================
-app.get('/', (req, res) => {
-    res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>SYED-MD | Crystal Speed</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=600;900&family=Poppins:wght=400;600&display=swap');
-            body { background: #020202; color: #fff; font-family: 'Poppins', sans-serif; position: relative; overflow: hidden; }
-            body::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.01) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.01) 1px, transparent 1px); background-size: 40px 40px; z-index: 0; }
-            .glass-3d { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 30px 60px rgba(0,0,0,0.8); transform: perspective(1000px) rotateX(2deg); }
-            .btn-3d { transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 4px 0px #1e40af; }
-            .btn-3d:active { transform: translateY(4px); box-shadow: 0 0px 0px #1e40af; }
-        </style>
-    </head>
-    <body class="flex items-center justify-center min-h-screen">
-        <div class="glass-3d p-8 rounded-3xl w-full max-w-sm text-center z-10 mx-4">
-            <div class="mb-6">
-                <div class="w-14 h-14 mx-auto bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mb-3">
-                    <span class="text-xl font-black text-white tracking-widest" style="font-family: 'Orbitron';">S-MD</span>
-                </div>
-                <h1 class="text-2xl font-black tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500" style="font-family: 'Orbitron';">SYED-MD SPEED</h1>
-                <p class="text-[10px] text-cyan-400 tracking-wider uppercase mt-1">⚡ Crystal Instant Engine ⚡</p>
-            </div>
-            <div id="formContainer" class="space-y-4">
-                <div class="text-left">
-                    <label class="block text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1.5 ml-1">WhatsApp Number</label>
-                    <input id="num" type="text" placeholder="e.g. 923001234567" class="w-full bg-black/60 border border-white/10 rounded-xl p-3.5 text-center font-mono text-sm outline-none focus:border-cyan-500 text-white tracking-widest transition-colors shadow-inner">
-                </div>
-                <button onclick="pair()" id="btn" class="btn-3d w-full bg-blue-600 hover:bg-blue-500 py-3.5 rounded-xl font-bold text-xs tracking-widest text-white uppercase">GENERATE INSTANT CODE</button>
-            </div>
-            <div id="result" class="hidden mt-6 p-4 bg-black/90 border border-cyan-500/40 rounded-2xl text-2xl font-mono font-black text-emerald-400 tracking-widest shadow-inner">---- ----</div>
-            <p id="infoText" class="hidden text-[10px] text-gray-500 mt-3 px-1 leading-relaxed">Copy this code, open WhatsApp Linked Devices, and enter it immediately.</p>
-            <div class="mt-8 pt-4 border-t border-white/5 text-[10px] text-gray-600 tracking-widest uppercase">
-                ⚡ Powered by <span class="font-bold text-indigo-400" style="font-family: 'Orbitron';">Syed Abdul Wahab Bukhari</span>
-            </div>
-        </div>
-        <script>
-            async function pair() {
-                const btn = document.getElementById('btn');
-                const numInput = document.getElementById('num');
-                let num = numInput.value.replace(/[^0-9]/g, '');
-                if(!num || num.length < 10) return alert('Please enter a valid phone number!');
-                btn.innerText = 'CRYSTALLIZING...';
-                btn.disabled = true;
-                try {
-                    const res = await fetch('/pair?number=' + num);
-                    const data = await res.json();
-                    if(data.code) {
-                        const cleanCode = data.code.replace(/[^A-Za-z0-9]/g, '');
-                        document.getElementById('result').innerText = cleanCode.match(/.{1,4}/g).join('-');
-                        document.getElementById('result').classList.remove('hidden');
-                        document.getElementById('infoText').classList.remove('hidden');
-                        btn.innerText = 'CODE GENERATED';
-                    } else {
-                        alert(data.error || 'Click again to trigger disk flush.');
-                        resetForm();
-                    }
-                } catch(err) {
-                    alert('Handshake Timeout. Try again.');
-                    resetForm();
-                }
-            }
-            function resetForm() {
-                const btn = document.getElementById('btn');
-                btn.innerText = 'GENERATE INSTANT CODE';
-                btn.disabled = false;
-            }
-        </script>
-    </body>
-    </html>
-    `);
+// =======================
+// ERROR SUPPRESSION (LAG FIX)
+// =======================
+process.on('uncaughtException', (err) => {
+    let e = String(err);
+    if (e.includes('conflict') || e.includes('not-authorized') || e.includes('Socket connection timeout')) return;
+    if (e.includes('Bad MAC') || e.includes('decrypt')) return;
 });
 
-// =========================================================================
-// 🛡️ [KAM 2 & 4]: MAIN PAIR ROUTE SYSTEM
-// =========================================================================
-app.get('/pair', async (req, res) => {
-    let num = req.query.number;
-    if (!num) return res.json({ error: "Number required" });
-    num = num.replace(/[^0-9]/g, '');
+process.on('unhandledRejection', (reason, promise) => {
+    let r = String(reason);
+    if (r.includes('Connection Closed') || r.includes('Rate Overlimit') || r.includes('Timed Out')) return;
+});
 
-    const tempAuthFolder = path.join(__dirname, 'session_' + num);
-    
-    try {
-        if (fs.existsSync(tempAuthFolder)) {
-            fs.rmSync(tempAuthFolder, { recursive: true, force: true });
+const originalConsoleError = console.error;
+console.error = (...args) => {
+    const errorMsg = args.join(' ');
+    const junkErrors = ['Bad MAC', 'Failed to decrypt', 'Session error', 'item-not-found', 'Connection reset by peer', 'ECONNRESET', 'socket hang up'];
+    if (junkErrors.some(junk => errorMsg.includes(junk))) return; 
+    originalConsoleError.apply(console, args);
+};
+
+// =======================
+// MAIN BOT FUNCTION
+// =======================
+async function startBot() {
+  const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+  
+  const sessionFolder = `./${config.sessionName}`;
+  const sessionFile = path.join(sessionFolder, 'creds.json');
+
+  // 1. Session ID Decoding
+  if (config.sessionID && config.sessionID.startsWith('ICONIC-MD~')) {
+    if (!fs.existsSync(sessionFile)) {
+      try {
+        console.log(chalk.yellow('ðŸ”„ Loading Session ID...'));
+        const b64data = config.sessionID.replace('ICONIC-MD~', '').trim();
+        const decodedData = Buffer.from(b64data, 'base64').toString('utf-8');
+
+        if (fs.existsSync(sessionFolder)) {
+          fs.rmSync(sessionFolder, { recursive: true, force: true });
         }
-        fs.mkdirSync(tempAuthFolder, { recursive: true });
+        fs.mkdirSync(sessionFolder, { recursive: true });
 
-        const { state, saveCreds } = await useMultiFileAuthState(tempAuthFolder);
-        
-        const sock = makeWASocket({
-            version: [2, 3000, 1015698762],
-            auth: state,
-            printQRInTerminal: false,
-            logger: pino({ level: 'fatal' }),
-            browser: ['Chrome', 'Windows', '10']
-        });
-
-        sock.ev.on('creds.update', async () => {
-            await saveCreds(); 
-        });
-
-        let attempts = 0;
-        const checkAndGenerate = async () => {
-            if (sock.authState?.creds?.noiseKey && sock.authState?.creds?.signedIdentityKey) {
-                try {
-                    let code = await sock.requestPairingCode(num);
-                    if (code && !res.headersSent) {
-                        return res.json({ code: code });
-                    }
-                } catch (e) {
-                    if (!res.headersSent) return res.json({ error: "WhatsApp server rejected handshake cluster." });
-                }
-            } else {
-                attempts++;
-                if (attempts < 10) {
-                    await delay(1000); 
-                    return checkAndGenerate();
-                } else {
-                    if (!res.headersSent) res.json({ error: "Railway IO Delay. Please click again." });
-                }
-            }
-        };
-
-        await delay(2000);
-        await checkAndGenerate();
-
-        // Welcome handler and close-cleanup system (Yahan brackets drop hue thay)
-        sock.ev.on('connection.update', async (update) => {
-            const { connection, lastDisconnect } = update;
-            if (connection === 'open') {
-                const welcomeText = `✨ *WELCOME TO SYED-MD* ✨\n\n👋 Linked successfully to core engine.\n⚡ Powered by Syed Abdul Wahab Bukhari`;
-                await sock.sendMessage(`${num}@s.whatsapp.net`, { text: welcomeText });
-                await delay(2000);
-                sock.logout();
-            }
-            if (connection === 'close') {
-                const isLoggedOut = lastDisconnect?.error?.output?.statusCode === DisconnectReason.loggedOut;
-                if (!isLoggedOut) {
-                    setTimeout(() => {
-                        try { if (fs.existsSync(tempAuthFolder)) fs.rmSync(tempAuthFolder, { recursive: true, force: true }); } catch(e) {}
-                    }, 5000);
-                }
-            }
-        });
-
-    } catch (err) {
-        if (!res.headersSent) res.json({ error: "Sandbox error: " + err.message });
+        fs.writeFileSync(sessionFile, decodedData, 'utf8');
+        console.log(chalk.green('âœ… Session Decoded Successfully!'));
+      } catch (e) {
+        console.log(chalk.red('âŒ Session Decode Error:', e.message));
+      }
     }
+  }
+
+  const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
+  const { version } = await fetchLatestBaileysVersion();
+
+  // 2. Socket Initialization
+  const sock = makeWASocket({
+    version,
+    logger: pino({ level: 'silent' }),
+    printQRInTerminal: false,
+    browser: ['Ubuntu', 'Chrome', '20.0.04'],
+    auth: state,
+    syncFullHistory: false,
+    generateHighQualityLinkPreview: false,
+    getMessage: async () => undefined 
+  });
+
+  // 3. AUTO PAIRING CODE SYSTEM (No input required)
+  if (!sock.authState.creds.registered) {
+      await new Promise(r => setTimeout(r, 2000));
+      console.log(chalk.bold.green('\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”'));
+      console.log(chalk.bold.yellow('ðŸ› ï¸  NO SESSION DETECTED - GENERATING PAIRING CODE'));
+      
+      const phoneNumber = process.env.PAIRING_NUMBER;
+
+      if (phoneNumber) {
+          console.log(chalk.cyan(`ðŸ‘‰ Auto-fetching pairing code for: ${phoneNumber}`));
+          try {
+              const codeNum = phoneNumber.replace(/[^0-9]/g, '');
+              const code = await sock.requestPairingCode(codeNum);
+              console.log(chalk.bgGreen.black(' ðŸ”— PAIRING CODE: '), chalk.bold.white(` ${code} `));
+              console.log(chalk.yellow('ðŸ“± Apne WhatsApp Linked Devices mein ja kar yeh code enter karein.'));
+          } catch (err) {
+              console.log(chalk.red('âŒ Pairing code request failed. Please check the number.'));
+          }
+      } else {
+          console.log(chalk.red('âŒ .env file mein PAIRING_NUMBER set nahi hai!'));
+          console.log(chalk.yellow('ðŸ‘‰ Bot ko rok kar .env file banayein aur usme PAIRING_NUMBER daalein.'));
+      }
+  }
+
+  // =========================================================================
+  // ðŸ›¡ï¸ SYED-MD ADVANCED ANTI-CALL INTERCEPTOR (BYPASS INTELLIGENCE)
+  // =========================================================================
+  sock.ev.on('call', async (callEvents) => {
+    const dataPath = path.join(__dirname, './allowed_callers.json');
+    let allowedCallers = [];
+    
+    // Whitelist file check & read
+    if (fs.existsSync(dataPath)) {
+        try { allowedCallers = JSON.parse(fs.readFileSync(dataPath, 'utf-8')); } catch (e) { allowedCallers = []; }
+    }
+
+    for (const call of callEvents) {
+        if (call.status === 'offer') {
+            const callFrom = call.from; 
+            const callId = call.id;
+
+            // âš¡ Ø§Ú¯Ø± Ù†Ù…Ø¨Ø± Ø§Ù„Ø§Ø¤ Ù„Ø³Ù¹ Ù…ÛŒÚº ÛÛ’ØŒ ØªÙˆ Ú©Ø§Ù„ Ú©Ùˆ Ú©Ø§Ù¹Û’ Ø¨ØºÛŒØ± ÛŒÛÛŒÚº Ø¨Ø§Ø¦ÛŒ Ù¾Ø§Ø³ (Bypass) Ú©Ø± Ø¯Ùˆ
+            if (allowedCallers.includes(callFrom)) {
+                console.log(chalk.green(`[CALL ALLOWED] Whitelisted member is calling: ${callFrom}`));
+                continue; 
+            }
+
+            // ðŸš« Ø§Ú¯Ø± Ù†Ù…Ø¨Ø± Ø§Ù„Ø§Ø¤ Ù„Ø³Ù¹ Ù…ÛŒÚº Ù†ÛÛŒÚº ÛÛ’ØŒ ØªÙˆ Ú©Ø§Ù„ Ú©Ù¹ Ø¬Ø§Ø¦Û’ Ú¯ÛŒ
+            console.log(chalk.red(`[CALL BLOCKED] Unauthorized call from: ${callFrom}`));
+            try {
+                await sock.rejectCall(callId, callFrom);
+                
+                const warningCard = `âš¡ ðŸ“² *S Y E D   M D   S E C U R I T Y* ðŸ“² âš¡\n` +
+                                    `â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—\n` +
+                                    `  âš ï¸ *CALL DETECTED & REJECTED!*\n` +
+                                    `  ðŸ‘¤ *FROM:* @${callFrom.split('@')[0]}\n` +
+                                    `  ðŸš« *STATUS:* Unauthorized Device\n` +
+                                    `â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n\n` +
+                                    `ðŸ’¡ _Note: Calling this bot is restricted. Please chat via text only._`;
+
+                await sock.sendMessage(callFrom, { text: warningCard, mentions: [callFrom] });
+            } catch (err) {
+                console.error('Anti-Call Injection Error:', err.message);
+            }
+        }
+    }
+  });
+  // =========================================================================
+
+  // 4. Connection Events
+  sock.ev.on('connection.update', (update) => {
+    const { connection, lastDisconnect } = update;
+
+    if (connection === 'close') {
+      const statusCode = lastDisconnect?.error?.output?.statusCode;
+      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+
+      if (statusCode === DisconnectReason.loggedOut) {
+        console.log(chalk.red('âŒ Session Expired ya Logged Out!'));
+        if (fs.existsSync(sessionFolder)) {
+          fs.rmSync(sessionFolder, { recursive: true, force: true });
+        }
+        console.log(chalk.yellow('ðŸ”„ Restarting bot to pair again...'));
+        process.exit(1); 
+      } else if (shouldReconnect) {
+        console.log(chalk.yellow('âš ï¸ Disconnected. Reconnecting in 5 seconds...'));
+        setTimeout(startBot, 5000);
+      }
+    }
+
+    if (connection === 'open') {
+      console.log(chalk.green('âœ… WAHAB-AI Connected Successfully!'));
+
+      const botNum = sock.user.id.split(':')[0];
+      if (!config.ownerNumber.includes(botNum)) {
+        config.ownerNumber.push(botNum);
+        console.log(chalk.blue(`ðŸ”§ Bot number auto-added as owner: ${botNum}`));
+      }
+
+      // handler.initializeAntiCall(sock); // Ù¾Ø±Ø§Ù†Û’ Ù„ÛŒØ³Ù†Ø± Ú©Ùˆ Ú©Ù…Ù†Ù¹ Ú©Ø± Ø¯ÛŒØ§ ÛÛ’ ØªØ§Ú©Û Ù†Ø¦Û’ Ø§Ù†Ù¹Ø±Ø³ÛŒÙ¾Ù¹Ø± Ú©Û’ Ø³Ø§ØªÚ¾ Ù¹Ú©Ø±Ø§Ø¤ Ù†Û ÛÙˆ
+    }
+  });
+
+  sock.ev.on('creds.update', saveCreds);
+
+  // 5. Message Handler
+  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    if (type !== 'notify') return;
+    for (const msg of messages) {
+      if (!msg.message) continue;
+      handler.handleMessage(sock, msg).catch(() => {});
+    }
+  });
+
+  return sock;
+}
+
+// =======================
+// START BOT
+// =======================
+console.log(chalk.cyan('ðŸš€ Starting WAHAB-AI Bot...\n'));
+startBot().catch(err => {
+  console.log(chalk.red('Startup Error:', err));
 });
 
-// =========================================================================
-// 🤖 SERVER INITIALIZATION & RAM CLEANER
-// =========================================================================
-const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[SERVER] Portal operational on port: ${PORT}`);
-});
-
-server.timeout = 0;
-server.keepAliveTimeout = 0;
-
+// =======================
+// ðŸ§¹ SILENT RAM CLEANER
+// =======================
 setInterval(() => {
-    try { if (global.gc) global.gc(); } catch (e) {}
+  try {
+    if (global.gc) global.gc();
+  } catch {}
 }, 30 * 60 * 1000);
-           
+      
