@@ -132,5 +132,5 @@ console.log(chalk.cyan('🚀 Starting WAHAB-AI Bot...\n'));
 startBot().catch(err => console.log(chalk.red('Startup Error:', err)));
 
 // CLEANER
-setInterval(() => { try { if (global.gc) global.gc(); } catch {} }, 30 * 60 * 1000);
+setInterval(() => { try { if (global.gc) global.gc(); } catch {} }, 30 * 60 * 1000); 
                    
