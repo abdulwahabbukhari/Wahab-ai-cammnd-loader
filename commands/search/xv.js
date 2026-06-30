@@ -12,15 +12,21 @@ module.exports = {
     try {
       await extra.reply("⏳ *Fetching and processing, please wait...*");
       
-      // API call
       const response = await fetch(`https://arslan-apis-v2.vercel.app/download/xvideosDown?url=${encodeURIComponent(args[0])}`);
       const json = await response.json();
       
-      // Debug: Agar API JSON de rahi hai, toh uska video link nikalna hoga
-      // JSON structure ke hisab se field name (jaise .result.url) change ho sakta hai
-      const videoUrl = json.result || json.url || json.link || json.video; 
-      
-      if (!videoUrl) return extra.reply("❌ *Video link nahi mil saka, API response invalid hai.*");
+      // Yahan hum log check karenge ki data sahi hai ya nahi
+      let videoUrl = json.result || json.url || json.link || json.video;
+
+      // Agar videoUrl abhi bhi object hai, toh hume uski string property nikalni hogi
+      if (typeof videoUrl === 'object') {
+          // Aksar API response mein link 'url' property ke andar hota hai
+          videoUrl = videoUrl.url || videoUrl.link || Object.values(videoUrl)[0];
+      }
+
+      if (!videoUrl || typeof videoUrl !== 'string') {
+          return extra.reply("❌ *Error:* Video link nahi mil saka. API response: " + JSON.stringify(json));
+      }
 
       // Video send karna
       await sock.sendMessage(extra.from, { 
@@ -34,4 +40,4 @@ module.exports = {
     }
   }
 };
-       
+          
