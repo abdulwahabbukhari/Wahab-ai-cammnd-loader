@@ -1,50 +1,51 @@
 const config = require('../../config');
 
 module.exports = {
-    name: 'menu',
+  name: 'menu',
 
-    async execute(sock, msg, args, extra) {
+  async execute(sock, msg, args, extra) {
 
-        const text = `
+    const text = `
 ╭─❀ *${config.botName}* ❀╮
 │ 👋 Hey
-│ 📂 Choose Menu Type
+│ 📂 Select Menu Type
 ╰────────────╯
 `;
 
-        const sections = [
-            {
-                title: "📋 MAIN MENUS",
-                rows: [
-                    {
-                        title: "🤖 AI Menu",
-                        rowId: ".menu_ai",
-                        description: "Open AI commands"
-                    },
-                    {
-                        title: "🎭 Fun Menu",
-                        rowId: ".menu_fun",
-                        description: "Open fun commands"
-                    },
-                    {
-                        title: "⬇️ Download Menu",
-                        rowId: ".menu_download",
-                        description: "Open download tools"
-                    },
-                    {
-                        title: "🧭 General Menu",
-                        rowId: ".menu_general",
-                        description: "Open general commands"
-                    }
-                ]
-            }
-        ];
+    const sections = [
+      {
+        title: "📋 MENU LIST",
+        rows: [
+          {
+            title: "🧭 General Menu",
+            rowId: ".menu_general",
+            description: "Open general commands"
+          },
+          {
+            title: "🤖 AI Menu",
+            rowId: ".menu_ai",
+            description: "Open AI commands"
+          },
+          {
+            title: "🎭 Fun Menu",
+            rowId: ".menu_fun",
+            description: "Open fun commands"
+          },
+          {
+            title: "⬇️ Download Menu",
+            rowId: ".menu_download",
+            description: "Open download tools"
+          }
+        ]
+      }
+    ];
 
-        await sock.sendMessage(extra.from, {
-            text,
-            footer: "Bot Menu System",
-            buttonText: "📋 OPEN MENU",
-            sections
-        }, { quoted: msg });
-    }
+    await sock.sendMessage(extra.from, {
+      text,
+      footer: "Bot Menu",
+      buttonText: "📋 OPEN MENU",
+      sections
+    }, { quoted: msg });
+
+  }
 };
