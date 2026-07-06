@@ -18,7 +18,7 @@ if (fs.existsSync('./.env')) {
   });
 }
 
-// KOYEB / PM2 DEPLOYMENT FIX: Dummy Server
+// 🌐 KOYEB / PM2 DEPLOYMENT FIX: Dummy Server
 http.createServer((req, res) => {
   res.writeHead(200);
   res.end('WAHAB-AI Bot is Running perfectly!');
@@ -91,10 +91,10 @@ async function startBot() {
     getMessage: async () => undefined 
   });
 
-  // 3. AUTO PAIRING CODE SYSTEM
+  // 3. AUTO PAIRING CODE SYSTEM (No input required)
   if (!sock.authState.creds.registered) {
       await new Promise(r => setTimeout(r, 2000));
-      console.log(chalk.bold.green('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
+      console.log(chalk.bold.green('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
       console.log(chalk.bold.yellow('🛠️  NO SESSION DETECTED - GENERATING PAIRING CODE'));
       
       const phoneNumber = process.env.PAIRING_NUMBER;
@@ -105,40 +105,15 @@ async function startBot() {
               const codeNum = phoneNumber.replace(/[^0-9]/g, '');
               const code = await sock.requestPairingCode(codeNum);
               console.log(chalk.bgGreen.black(' 🔗 PAIRING CODE: '), chalk.bold.white(` ${code} `));
+              console.log(chalk.yellow('📱 Apne WhatsApp Linked Devices mein ja kar yeh code enter karein.'));
           } catch (err) {
-              console.log(chalk.red('❌ Pairing code request failed.'));
+              console.log(chalk.red('❌ Pairing code request failed. Please check the number.'));
           }
       } else {
           console.log(chalk.red('❌ .env file mein PAIRING_NUMBER set nahi hai!'));
+          console.log(chalk.yellow('👉 Bot ko rok kar .env file banayein aur usme PAIRING_NUMBER daalein.'));
       }
   }
-
-  // =========================================================================
-  // 🛡️ ANTI-CALL INTEGRATION WITH WHITELIST LOGIC
-  // =========================================================================
-  sock.ev.on('call', async (callEvents) => {
-    const dataPath = path.join(__dirname, './allowed_callers.json');
-    let allowedCallers = [];
-    
-    // Whitelist file checking
-    if (fs.existsSync(dataPath)) {
-        try { allowedCallers = JSON.parse(fs.readFileSync(dataPath, 'utf-8')); } catch (e) { allowedCallers = []; }
-    }
-
-    for (const call of callEvents) {
-        if (call.status === 'offer') {
-            const callFrom = call.from; 
-            
-            // Agar number whitelist mein hai, toh yahan se bypass (continue) karo
-            if (allowedCallers.includes(callFrom)) {
-                console.log(chalk.green(`[CALL ALLOWED] Whitelisted member is calling: ${callFrom}`));
-                continue; 
-            }
-
-            // Agar whitelist mein nahi hai, toh yeh event handler.js sambhalega (Jo ke warnings count karega)
-        }
-    }
-  });
 
   // 4. Connection Events
   sock.ev.on('connection.update', (update) => {
@@ -153,6 +128,7 @@ async function startBot() {
         if (fs.existsSync(sessionFolder)) {
           fs.rmSync(sessionFolder, { recursive: true, force: true });
         }
+        console.log(chalk.yellow('🔄 Restarting bot to pair again...'));
         process.exit(1); 
       } else if (shouldReconnect) {
         console.log(chalk.yellow('⚠️ Disconnected. Reconnecting in 5 seconds...'));
@@ -166,10 +142,10 @@ async function startBot() {
       const botNum = sock.user.id.split(':')[0];
       if (!config.ownerNumber.includes(botNum)) {
         config.ownerNumber.push(botNum);
+        console.log(chalk.blue(`🔧 Bot number auto-added as owner: ${botNum}`));
       }
 
-      // Handler ka real warning system active karne ki important line
-      handler.initializeAntiCall(sock); 
+      handler.initializeAntiCall(sock);
     }
   });
 
@@ -187,16 +163,21 @@ async function startBot() {
   return sock;
 }
 
+// =======================
 // START BOT
+// =======================
 console.log(chalk.cyan('🚀 Starting WAHAB-AI Bot...\n'));
 startBot().catch(err => {
   console.log(chalk.red('Startup Error:', err));
 });
 
-// RAM CLEANER
+// =======================
+// 🧹 SILENT RAM CLEANER
+// =======================
 setInterval(() => {
   try {
     if (global.gc) global.gc();
   } catch {}
 }, 30 * 60 * 1000);
-      
+
+        
