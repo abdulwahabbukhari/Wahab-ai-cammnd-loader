@@ -42,7 +42,7 @@ const originalConsoleError = console.error;
 console.error = (...args) => {
     const errorMsg = args.join(' ');
     const junkErrors = ['Bad MAC', 'Failed to decrypt', 'Session error', 'item-not-found', 'Connection reset by peer', 'ECONNRESET', 'socket hang up'];
-    if (junkErrors.some(junk => errorMsg.includes(junk))) return; 
+    if (junkErrors.some(junk => errorMsg.includes(junk))) return;
     originalConsoleError.apply(console, args);
 };
 
@@ -51,7 +51,7 @@ console.error = (...args) => {
 // =======================
 async function startBot() {
   const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-  
+
   const sessionFolder = `./${config.sessionName}`;
   const sessionFile = path.join(sessionFolder, 'creds.json');
 
@@ -88,7 +88,7 @@ async function startBot() {
     auth: state,
     syncFullHistory: false,
     generateHighQualityLinkPreview: false,
-    getMessage: async () => undefined 
+    getMessage: async () => undefined
   });
 
   // 3. AUTO PAIRING CODE SYSTEM (No input required)
@@ -96,7 +96,7 @@ async function startBot() {
       await new Promise(r => setTimeout(r, 2000));
       console.log(chalk.bold.green('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
       console.log(chalk.bold.yellow('🛠️  NO SESSION DETECTED - GENERATING PAIRING CODE'));
-      
+
       const phoneNumber = process.env.PAIRING_NUMBER;
 
       if (phoneNumber) {
@@ -129,7 +129,7 @@ async function startBot() {
           fs.rmSync(sessionFolder, { recursive: true, force: true });
         }
         console.log(chalk.yellow('🔄 Restarting bot to pair again...'));
-        process.exit(1); 
+        process.exit(1);
       } else if (shouldReconnect) {
         console.log(chalk.yellow('⚠️ Disconnected. Reconnecting in 5 seconds...'));
         setTimeout(startBot, 5000);
@@ -146,6 +146,7 @@ async function startBot() {
       }
 
       handler.initializeAntiCall(sock);
+      handler.initializeAntiDelete(sock);
     }
   });
 
@@ -179,5 +180,3 @@ setInterval(() => {
     if (global.gc) global.gc();
   } catch {}
 }, 30 * 60 * 1000);
-
-        
