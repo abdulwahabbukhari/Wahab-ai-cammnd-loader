@@ -196,9 +196,11 @@ const handleMessage = async (sock, msg) => {
     // Group mein sirf tab reply karega jab bot ko tag/mention kiya ho ya reply kiya ho,
     // takay bot group mein har msg pe bol-bol na kare (spam na ho).
     if (!isFromMe) {
-      const isMentioned = contentMsg?.extendedTextMessage?.contextInfo?.mentionedJid?.includes(sock.user.id.split(':')[0] + '@s.whatsapp.net');
+      const botNumber = extractNumber(sock.user.id);
+      const mentionedJids = contentMsg?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+      const isMentioned = mentionedJids.some(jid => extractNumber(jid) === botNumber);
       const isReplyToBot = contentMsg?.extendedTextMessage?.contextInfo?.participant &&
-        extractNumber(contentMsg.extendedTextMessage.contextInfo.participant) === extractNumber(sock.user.id);
+        extractNumber(contentMsg.extendedTextMessage.contextInfo.participant) === botNumber;
 
       const dmAllowed = !isGroup && activeConfig.autoReplyDM;
       const groupAllowed = isGroup && activeConfig.autoReplyGroup && (isMentioned || isReplyToBot);
@@ -302,9 +304,12 @@ const initializeAntiCall = (sock) => {
         const caller = normalizeJid(call.from);
         const callerNumber = extractNumber(caller);
 
-        // 🛡️ WHITELIST CHECK: Owners aur Allowed Callers ko ignore karna hai
+        // 🛡️ WHITELIST CHECK: config.js ki allowedCallers AUR .allowcallers command
+        // se anticallManager data.json mein saved numbers, dono check honge.
         const isOwnerCaller = activeConfig.ownerNumber.includes(callerNumber);
-        const isAllowedCaller = (activeConfig.allowedCallers || []).includes(callerNumber);
+        const isConfigAllowed = (activeConfig.allowedCallers || []).includes(callerNumber);
+        const isDataAllowed = (data.allowed || []).includes(callerNumber);
+        const isAllowedCaller = isConfigAllowed || isDataAllowed;
 
         if (isOwnerCaller || isAllowedCaller) {
           console.log(`[🛡️ SYED MD] Call bypassed for whitelisted number: ${callerNumber}`);
