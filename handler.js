@@ -198,9 +198,26 @@ const handleMessage = async (sock, msg) => {
     if (!isFromMe) {
       const botNumber = extractNumber(sock.user.id);
       const mentionedJids = contentMsg?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-      const isMentioned = mentionedJids.some(jid => extractNumber(jid) === botNumber);
-      const isReplyToBot = contentMsg?.extendedTextMessage?.contextInfo?.participant &&
-        extractNumber(contentMsg.extendedTextMessage.contextInfo.participant) === botNumber;
+      let isMentioned = mentionedJids.some(jid => extractNumber(jid) === botNumber);
+      if (!isMentioned) {
+        // LID format mein mention ho sakta hai, ek-ek karke resolve karo
+        for (const jid of mentionedJids) {
+          if (jid.includes('@lid')) {
+            const resolved = await resolveLidToPn(sock, jid);
+            if (extractNumber(resolved) === botNumber) { isMentioned = true; break; }
+          }
+        }
+      }
+
+      let replyParticipant = contentMsg?.extendedTextMessage?.contextInfo?.participant;
+      if (replyParticipant && replyParticipant.includes('@lid')) {
+        replyParticipant = await resolveLidToPn(sock, replyParticipant);
+      }
+      const isReplyToBot = replyParticipant && extractNumber(replyParticipant) === botNumber;
+
+      if (isGroup) {
+        console.log(`[🤖 DEBUG] Group msg | mentionedJids: ${JSON.stringify(mentionedJids)} | botNumber: ${botNumber} | isMentioned: ${isMentioned} | isReplyToBot: ${isReplyToBot}`);
+      }
 
       const dmAllowed = !isGroup && activeConfig.autoReplyDM;
       const groupAllowed = isGroup && activeConfig.autoReplyGroup && (isMentioned || isReplyToBot);
@@ -301,8 +318,16 @@ const initializeAntiCall = (sock) => {
       for (const call of calls) {
         if (call.status !== 'offer') continue;
 
-        const caller = normalizeJid(call.from);
+        let caller = normalizeJid(call.from);
+        // 🔄 Agar caller ka JID LID format mein hai (@lid), to usay asal
+        // phone number (PN) mein resolve karo, warna number match nahi hoga
+        if (caller.includes('@lid')) {
+          caller = await resolveLidToPn(sock, caller);
+          caller = normalizeJid(caller);
+        }
         const callerNumber = extractNumber(caller);
+
+        console.log(`[📞 DEBUG] Raw caller: ${call.from} | Resolved: ${caller} | Extracted Number: ${callerNumber}`);
 
         // 🛡️ WHITELIST CHECK: config.js ki allowedCallers AUR .allowcallers command
         // se anticallManager data.json mein saved numbers, dono check honge.
