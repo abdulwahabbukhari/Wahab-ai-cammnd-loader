@@ -75,4 +75,4 @@ module.exports = {
       return extra.reply('❌ Demote karte waqt error aya. Bot ke admin permissions check karein.');
     }
   }
-};
+}; 
