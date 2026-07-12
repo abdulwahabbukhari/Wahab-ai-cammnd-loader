@@ -44,22 +44,38 @@ const getPersona = () => {
 // ─── Owner Check (Updated for Bot Number) ─────────────────────────────────────
 const isOwner = (senderJid, sock, activeConfig) => {
   if (!senderJid) return false;
-  
+
   const senderNum = extractNumber(senderJid);
-  
+
   // 1. Config.js wali list check karein
   if (activeConfig.ownerNumber.includes(senderNum)) return true;
-  
+
   // 2. Bot ka apna connected number hamesha owner rahay
   if (sock && sock.user && sock.user.id) {
     const botNum = extractNumber(sock.user.id);
     if (senderNum === botNum) return true;
-    
+
     // Check LID if available
     if (sock.user.lid && extractNumber(sock.user.lid) === senderNum) return true;
   }
-  
+
   return false;
+};
+
+// ─── ANTI-DELETE: In-Memory Message Cache ─────────────────────────────────────
+// Structure: Map<messageId, { from, sender, isGroup, type, text, media: {buffer, mimetype, type}, timestamp }>
+// RAM-only cache — bot restart hone par khud khatam ho jayega.
+const messageStore = new Map();
+
+// Cache ki size control karne ke liye (memory leak se bachne ke liye)
+const MAX_CACHE_SIZE = 5000;
+const addToStore = (id, data) => {
+  if (messageStore.size >= MAX_CACHE_SIZE) {
+    // sabse purana entry hata do
+    const firstKey = messageStore.keys().next().value;
+    messageStore.delete(firstKey);
+  }
+  messageStore.set(id, data);
 };
 
 // ─── Main Message Handler ─────────────────────────────────────────────────────
@@ -76,10 +92,10 @@ const handleMessage = async (sock, msg) => {
 
     const isGroup = from.endsWith('@g.us');
     const isFromMe = msg.key.fromMe;
-    
+
     // Sender ID theek se extract karna
     const sender = normalizeJid(msg.key.participant || msg.key.remoteJid);
-    
+
     const userName = msg.pushName || 'Friend';
     const isSenderOwner = isOwner(sender, sock, activeConfig);
 
@@ -87,8 +103,63 @@ const handleMessage = async (sock, msg) => {
     let contentMsg = msg.message?.ephemeralMessage?.message || msg.message?.viewOnceMessageV2?.message || msg.message;
     let body = contentMsg?.conversation || contentMsg?.extendedTextMessage?.text || contentMsg?.imageMessage?.caption || contentMsg?.videoMessage?.caption || '';
     let textMsg = body.trim();
-    
-    // 🚀 NEW: NOPREFIX LOGIC ADDED HERE
+
+    // ============= ANTI-DELETE: Cache every incoming message (text + media) =============
+    if (activeConfig.antiDelete && !isFromMe) {
+      try {
+        const mediaTypeMap = {
+          imageMessage: 'image',
+          videoMessage: 'video',
+          stickerMessage: 'sticker',
+          audioMessage: 'audio',
+          documentMessage: 'document'
+        };
+
+        let mediaType = null;
+        let mediaContent = null;
+        for (const key of Object.keys(mediaTypeMap)) {
+          if (contentMsg?.[key]) {
+            mediaType = mediaTypeMap[key];
+            mediaContent = contentMsg[key];
+            break;
+          }
+        }
+
+        let mediaBuffer = null;
+        let mediaMime = null;
+
+        if (mediaType) {
+          try {
+            const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+            mediaBuffer = await downloadMediaMessage(
+              { message: contentMsg, key: msg.key },
+              'buffer',
+              {},
+              { logger: undefined, reuploadRequest: sock.updateMediaMessage }
+            );
+            mediaMime = mediaContent.mimetype || null;
+          } catch (dlErr) {
+            console.error('AntiDelete media download error:', dlErr.message);
+          }
+        }
+
+        addToStore(msg.key.id, {
+          from,
+          sender,
+          isGroup,
+          userName,
+          text: textMsg,
+          mediaType,
+          mediaBuffer,
+          mediaMime,
+          timestamp: Date.now()
+        });
+      } catch (cacheErr) {
+        console.error('AntiDelete cache error:', cacheErr.message);
+      }
+    }
+
+    // 🚀 NOPREFIX LOGIC
     let isCmd = false;
     let commandName = '';
     let args = [];
@@ -102,7 +173,7 @@ const handleMessage = async (sock, msg) => {
       // Without Prefix (If enabled in config)
       let tempArgs = textMsg.trim().split(/\s+/);
       let possibleCmd = tempArgs[0]?.toLowerCase();
-      
+
       let commandExists = commands.has(possibleCmd);
       if (!commandExists) {
         for (const cmd of commands.values()) {
@@ -121,8 +192,19 @@ const handleMessage = async (sock, msg) => {
     }
 
     // ================= 1. CHATBOT FEATURE (AI Auto Reply) =================
-    if (activeConfig.autoReply && !isFromMe && !isGroup) {
-      if (!isCmd && textMsg.length > 0) {
+    // DM aur Group ke liye alag alag ON/OFF (config.autoReplyDM / config.autoReplyGroup)
+    // Group mein sirf tab reply karega jab bot ko tag/mention kiya ho ya reply kiya ho,
+    // takay bot group mein har msg pe bol-bol na kare (spam na ho).
+    if (!isFromMe) {
+      const isMentioned = contentMsg?.extendedTextMessage?.contextInfo?.mentionedJid?.includes(sock.user.id.split(':')[0] + '@s.whatsapp.net');
+      const isReplyToBot = contentMsg?.extendedTextMessage?.contextInfo?.participant &&
+        extractNumber(contentMsg.extendedTextMessage.contextInfo.participant) === extractNumber(sock.user.id);
+
+      const dmAllowed = !isGroup && activeConfig.autoReplyDM;
+      const groupAllowed = isGroup && activeConfig.autoReplyGroup && (isMentioned || isReplyToBot);
+      const allowedInThisChat = dmAllowed || groupAllowed;
+
+      if (!isCmd && textMsg.length > 0 && allowedInThisChat) {
         await sock.sendPresenceUpdate('composing', from);
 
         const persona = getPersona().replace(/\{name\}/g, userName);
@@ -148,7 +230,7 @@ const handleMessage = async (sock, msg) => {
     if (!isCmd) return;
 
     if (activeConfig.selfMode && !isSenderOwner && !isFromMe) {
-      return; 
+      return;
     }
 
     // Yahan pe direct command check kar raha hai kyunke upar args parse ho chuke hain
@@ -205,7 +287,7 @@ const initializeAntiCall = (sock) => {
     try {
       const data = loadData();
       if (!data.enabled) return;
-      
+
       // 🔄 Live config read karo takay whitelist update hoti rahay
       delete require.cache[require.resolve('./config')];
       const activeConfig = require('./config');
@@ -216,17 +298,17 @@ const initializeAntiCall = (sock) => {
 
       for (const call of calls) {
         if (call.status !== 'offer') continue;
-        
+
         const caller = normalizeJid(call.from);
         const callerNumber = extractNumber(caller);
 
         // 🛡️ WHITELIST CHECK: Owners aur Allowed Callers ko ignore karna hai
-        const isOwner = activeConfig.ownerNumber.includes(callerNumber);
+        const isOwnerCaller = activeConfig.ownerNumber.includes(callerNumber);
         const isAllowedCaller = (activeConfig.allowedCallers || []).includes(callerNumber);
 
-        if (isOwner || isAllowedCaller) {
+        if (isOwnerCaller || isAllowedCaller) {
           console.log(`[🛡️ SYED MD] Call bypassed for whitelisted number: ${callerNumber}`);
-          continue; 
+          continue;
         }
 
         changed = true;
@@ -266,8 +348,78 @@ const initializeAntiCall = (sock) => {
   });
 };
 
+// ================= 4. ANTI-DELETE FEATURE =================
+// Jab koi message delete/revoke kare (WhatsApp "Delete for everyone"),
+// yeh function cache se original message dhoond kar bot ke apne number
+// (self chat) mein forward kar deta hai — text aur media (image/video/sticker) dono.
+const initializeAntiDelete = (sock) => {
+  sock.ev.on('messages.update', async (updates) => {
+    try {
+      delete require.cache[require.resolve('./config')];
+      const activeConfig = require('./config');
+      if (!activeConfig.antiDelete) return;
+
+      for (const update of updates) {
+        const { key, update: updData } = update;
+
+        // Delete/Revoke detect karna
+        const isRevoked = updData?.message === null || updData?.messageStubType === 1 /* REVOKE */;
+        if (!isRevoked) continue;
+
+        const msgId = key.id;
+        const cached = messageStore.get(msgId);
+        if (!cached) continue; // cache mein nahi mila, kuch nahi kar sakte
+
+        // Bot ka apna number — self message destination
+        const selfJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+
+        const chatLabel = cached.isGroup ? `Group: ${cached.from}` : `DM`;
+        const senderLabel = cached.userName ? `${cached.userName} (${extractNumber(cached.sender)})` : extractNumber(cached.sender);
+
+        const header =
+          `🗑️ *Anti-Delete Alert*\n\n` +
+          `👤 *Sender:* ${senderLabel}\n` +
+          `📍 *Chat:* ${chatLabel}\n` +
+          `🕒 *Time:* ${new Date(cached.timestamp).toLocaleString('en-US', { timeZone: activeConfig.timezone || 'Asia/Karachi' })}\n`;
+
+        try {
+          if (cached.mediaBuffer && cached.mediaType) {
+            const mediaMsgMap = {
+              image: { image: cached.mediaBuffer, caption: header + (cached.text ? `\n💬 *Caption:* ${cached.text}` : '') },
+              video: { video: cached.mediaBuffer, caption: header + (cached.text ? `\n💬 *Caption:* ${cached.text}` : '') },
+              sticker: { sticker: cached.mediaBuffer },
+              audio: { audio: cached.mediaBuffer, mimetype: cached.mediaMime || 'audio/mp4' },
+              document: { document: cached.mediaBuffer, mimetype: cached.mediaMime || 'application/octet-stream' }
+            };
+
+            const payload = mediaMsgMap[cached.mediaType];
+            await sock.sendMessage(selfJid, payload);
+
+            // Sticker ka apna caption support nahi karta, is liye header alag se bhejna
+            if (cached.mediaType === 'sticker') {
+              await sock.sendMessage(selfJid, { text: header + (cached.text ? `\n💬 *Caption:* ${cached.text}` : '') });
+            }
+          } else {
+            await sock.sendMessage(selfJid, {
+              text: header + `\n💬 *Message:*\n${cached.text || '(empty / unsupported message type)'}`
+            });
+          }
+        } catch (sendErr) {
+          console.error('AntiDelete forward error:', sendErr.message);
+        }
+
+        // Cache se hata do, dobara forward na ho
+        messageStore.delete(msgId);
+      }
+    } catch (err) {
+      console.error('AntiDelete Error:', err);
+    }
+  });
+};
+
 module.exports = {
   handleMessage,
   initializeAntiCall,
+  initializeAntiDelete,
   isOwner
 };
