@@ -26,6 +26,8 @@ module.exports = {
         if (num) targetJid = `${num}@s.whatsapp.net`;
       }
 
+      console.log(`[📸 GETPP DEBUG] mentionedJid: ${JSON.stringify(contextInfo?.mentionedJid)} | participant: ${contextInfo?.participant} | args: ${JSON.stringify(args)}`);
+
       if (!targetJid) {
         return extra.reply(
           '❌ Kisi ko mention karein, unke message ko reply karein, ya number dein!\n\nUsage:\n.getpp @user\n.getpp (reply to someone)\n.getpp 923001234567'
@@ -34,14 +36,20 @@ module.exports = {
 
       // LID format ho to resolve karo asal number mein
       if (targetJid.includes('@lid')) {
+        console.log(`[📸 GETPP DEBUG] Resolving LID: ${targetJid}`);
         targetJid = await resolveLidToPn(sock, targetJid);
+        console.log(`[📸 GETPP DEBUG] Resolved to: ${targetJid}`);
       }
       targetJid = normalizeJid(targetJid);
+      console.log(`[📸 GETPP DEBUG] Final targetJid: ${targetJid}`);
 
       let ppUrl;
       try {
+        console.log(`[📸 GETPP DEBUG] Calling profilePictureUrl for: ${targetJid}`);
         ppUrl = await sock.profilePictureUrl(targetJid, 'image');
+        console.log(`[📸 GETPP DEBUG] Got URL: ${ppUrl}`);
       } catch (err) {
+        console.log(`[📸 GETPP DEBUG] profilePictureUrl ERROR: ${err.message}`);
         return extra.reply(`❌ Profile picture nahi mili. Ho sakta hai user ki DP private ho ya set na ho.\n\n📞 Number: ${extractNumber(targetJid)}`);
       }
 
