@@ -47,9 +47,22 @@ module.exports = {
       try {
         console.log(`[📸 GETPP DEBUG] Calling profilePictureUrl for: ${targetJid}`);
         ppUrl = await sock.profilePictureUrl(targetJid, 'image');
-        console.log(`[📸 GETPP DEBUG] Got URL: ${ppUrl}`);
+        console.log(`[📸 GETPP DEBUG] Got URL (image): ${ppUrl}`);
       } catch (err) {
-        console.log(`[📸 GETPP DEBUG] profilePictureUrl ERROR: ${err.message}`);
+        console.log(`[📸 GETPP DEBUG] 'image' fetch ERROR: ${err.message}`);
+      }
+
+      // Agar high-res 'image' na mile ya undefined aaye, 'preview' try karo
+      if (!ppUrl) {
+        try {
+          ppUrl = await sock.profilePictureUrl(targetJid, 'preview');
+          console.log(`[📸 GETPP DEBUG] Got URL (preview): ${ppUrl}`);
+        } catch (err) {
+          console.log(`[📸 GETPP DEBUG] 'preview' fetch ERROR: ${err.message}`);
+        }
+      }
+
+      if (!ppUrl) {
         return extra.reply(`❌ Profile picture nahi mili. Ho sakta hai user ki DP private ho ya set na ho.\n\n📞 Number: ${extractNumber(targetJid)}`);
       }
 
@@ -67,4 +80,3 @@ module.exports = {
     }
   }
 };
- 
