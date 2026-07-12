@@ -26,8 +26,6 @@ module.exports = {
         if (num) targetJid = `${num}@s.whatsapp.net`;
       }
 
-      console.log(`[📸 GETPP DEBUG] mentionedJid: ${JSON.stringify(contextInfo?.mentionedJid)} | participant: ${contextInfo?.participant} | args: ${JSON.stringify(args)}`);
-
       if (!targetJid) {
         return extra.reply(
           '❌ Kisi ko mention karein, unke message ko reply karein, ya number dein!\n\nUsage:\n.getpp @user\n.getpp (reply to someone)\n.getpp 923001234567'
@@ -36,34 +34,26 @@ module.exports = {
 
       // LID format ho to resolve karo asal number mein
       if (targetJid.includes('@lid')) {
-        console.log(`[📸 GETPP DEBUG] Resolving LID: ${targetJid}`);
         targetJid = await resolveLidToPn(sock, targetJid);
-        console.log(`[📸 GETPP DEBUG] Resolved to: ${targetJid}`);
       }
       targetJid = normalizeJid(targetJid);
-      console.log(`[📸 GETPP DEBUG] Final targetJid: ${targetJid}`);
 
+      // 'image' (high-res) try karo, na mile to 'preview' (thumbnail) try karo
       let ppUrl;
       try {
-        console.log(`[📸 GETPP DEBUG] Calling profilePictureUrl for: ${targetJid}`);
         ppUrl = await sock.profilePictureUrl(targetJid, 'image');
-        console.log(`[📸 GETPP DEBUG] Got URL (image): ${ppUrl}`);
-      } catch (err) {
-        console.log(`[📸 GETPP DEBUG] 'image' fetch ERROR: ${err.message}`);
-      }
+      } catch (_) { /* no-op, preview try karenge */ }
 
-      // Agar high-res 'image' na mile ya undefined aaye, 'preview' try karo
       if (!ppUrl) {
         try {
           ppUrl = await sock.profilePictureUrl(targetJid, 'preview');
-          console.log(`[📸 GETPP DEBUG] Got URL (preview): ${ppUrl}`);
-        } catch (err) {
-          console.log(`[📸 GETPP DEBUG] 'preview' fetch ERROR: ${err.message}`);
-        }
+        } catch (_) { /* no-op, neeche error handle hoga */ }
       }
 
       if (!ppUrl) {
-        return extra.reply(`❌ Profile picture nahi mili. Ho sakta hai user ki DP private ho ya set na ho.\n\n📞 Number: ${extractNumber(targetJid)}`);
+        return extra.reply(
+          `❌ Profile picture nahi mili.\n\nWajah yeh ho sakti hai:\n• User ne DP set hi nahi ki\n• DP ki privacy "My Contacts" par set hai\n\n📞 Number: ${extractNumber(targetJid)}`
+        );
       }
 
       await sock.sendMessage(
@@ -75,7 +65,7 @@ module.exports = {
         { quoted: msg }
       );
     } catch (error) {
-      console.error('getpp command error:', error);
+      console.error('getpp command error:', error.message);
       return extra.reply('❌ Kuch masla ho gaya profile picture fetch karte waqt.');
     }
   }
