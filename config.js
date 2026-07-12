@@ -8,13 +8,35 @@ module.exports = {
     version: '1.0.0',
     prefix: '.',
 
+    // 🚀 NOPREFIX MODE
+    // true  = commands bina '.' prefix ke bhi chalengi (e.g. "menu" instead of ".menu")
+    // false = sirf prefix wale commands chalenge (e.g. ".menu")
+    noprefix: false,
+
+    // 🛡️ ALLOWED CALLERS (Anticall Whitelist)
+    // In numbers ki calls ANTICALL system ignore kar dega (reject/block nahi hoga)
+    // Number format: country code + number, bina '+' ya spaces ke (jaise ownerNumber wala format)
+    allowedCallers: [
+        // '923001234567',
+    ],
+
+    // 🗑️ ANTI-DELETE
+    // true  = koi bhi deleted message (text/image/video/sticker) bot ke apne number
+    //         par (self chat) forward ho jayega — DM aur Groups dono mein
+    // false = anti-delete feature bandh
+    antiDelete: true,
+
     channelId: '120363426863283917@newsletter',
 
     sessionName: 'session',
     sessionID: process.env.SESSION_ID || '',
     
     selfMode: true,
-    autoReply: false,
+    // 🤖 AI AUTO-REPLY (Chatbot) — DM aur Group ke liye alag control
+    // .chatbot on dms / .chatbot off dms  -> DM control
+    // .chatbot on gc  / .chatbot off gc   -> Group control
+    autoReplyDM: false,
+    autoReplyGroup: false,
 
     messages: {
       wait: '⏳ Please wait...',
@@ -25,4 +47,3 @@ module.exports = {
 
     timezone: 'Asia/Karachi'
 };
-    
