@@ -18,9 +18,21 @@ module.exports = {
       const botJid = normalizeJid(sock.user.id);
       const botNumber = extractNumber(botJid);
 
-      const botParticipant = groupMetadata.participants.find(
+      let botParticipant = groupMetadata.participants.find(
         p => extractNumber(p.id) === botNumber
       );
+
+      if (!botParticipant) {
+        for (const p of groupMetadata.participants) {
+          if (p.id.includes('@lid')) {
+            const resolved = await resolveLidToPn(sock, p.id);
+            if (extractNumber(resolved) === botNumber) {
+              botParticipant = p;
+              break;
+            }
+          }
+        }
+      }
 
       if (!botParticipant || !['admin', 'superadmin'].includes(botParticipant.admin)) {
         return extra.reply('❌ Bot ko pehle group admin banayein, phir demote command kaam karegi!');
