@@ -24,7 +24,10 @@ module.exports = {
 
       const targetJid = await resolveTargetJid(sock, msg, args);
       if (!targetJid) {
-        return extra.reply('❌ Kisi ko mention karein ya unke message ko reply karke .kick likhein!\n\nUsage:\n.kick @user\n.kick (reply to someone)');
+        // Koi target nahi diya (na mention, na reply, na number) — bot khud group leave kar dega
+        await extra.reply('👋 Koi target nahi mila — main khud is group ko leave kar raha hoon...');
+        await sock.groupLeave(extra.from);
+        return;
       }
 
       const targetNumber = extractNumber(targetJid);
