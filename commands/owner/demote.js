@@ -1,4 +1,5 @@
-const { normalizeJid, resolveLidToPn, extractNumber } = require('../../utils/jidHelper');
+const { extractNumber } = require('../../utils/jidHelper');
+const { checkBotAdmin, findParticipant, resolveTargetJid } = require('../../utils/groupHelper');
 
 module.exports = {
   name: 'demote',
@@ -15,50 +16,20 @@ module.exports = {
       }
 
       const groupMetadata = await sock.groupMetadata(extra.from);
-      const botJid = normalizeJid(sock.user.id);
-      const botNumber = extractNumber(botJid);
+      const { isAdmin } = await checkBotAdmin(sock, groupMetadata);
 
-      let botParticipant = groupMetadata.participants.find(
-        p => extractNumber(p.id) === botNumber
-      );
-
-      if (!botParticipant) {
-        for (const p of groupMetadata.participants) {
-          if (p.id.includes('@lid')) {
-            const resolved = await resolveLidToPn(sock, p.id);
-            if (extractNumber(resolved) === botNumber) {
-              botParticipant = p;
-              break;
-            }
-          }
-        }
-      }
-
-      if (!botParticipant || !['admin', 'superadmin'].includes(botParticipant.admin)) {
+      if (!isAdmin) {
         return extra.reply('❌ Bot ko pehle group admin banayein, phir demote command kaam karegi!');
       }
 
-      const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
-      let targetJid = contextInfo?.mentionedJid?.[0] || contextInfo?.participant;
-
-      if (!targetJid && args[0]) {
-        const num = args[0].replace(/[^0-9]/g, '');
-        if (num) targetJid = `${num}@s.whatsapp.net`;
-      }
-
+      const targetJid = await resolveTargetJid(sock, msg, args);
       if (!targetJid) {
         return extra.reply('❌ Kisi ko mention karein ya unke message ko reply karke .demote likhein!\n\nUsage:\n.demote @user\n.demote (reply to someone)');
       }
 
-      if (targetJid.includes('@lid')) {
-        targetJid = await resolveLidToPn(sock, targetJid);
-      }
-      targetJid = normalizeJid(targetJid);
       const targetNumber = extractNumber(targetJid);
 
-      const targetParticipant = groupMetadata.participants.find(
-        p => extractNumber(p.id) === targetNumber
-      );
+      const targetParticipant = await findParticipant(sock, groupMetadata.participants, targetNumber);
       if (!targetParticipant) {
         return extra.reply('❌ Yeh user is group mein maujood nahi hai!');
       }
@@ -67,12 +38,12 @@ module.exports = {
         return extra.reply('⚠️ Yeh user admin hai hi nahi!');
       }
 
-      await sock.groupParticipantsUpdate(extra.from, [targetJid], 'demote');
+      await sock.groupParticipantsUpdate(extra.from, [targetParticipant.id], 'demote');
       return extra.reply(`✅ Successfully demoted *${targetNumber}* to regular member!`);
 
     } catch (error) {
-      console.error('demote command error:', error.message);
-      return extra.reply('❌ Demote karte waqt error aya. Bot ke admin permissions check karein.');
+      console.error('demote command error:', error);
+      return extra.reply(`❌ DEBUG ERROR: ${error.message}`);
     }
   }
-}; 
+};
