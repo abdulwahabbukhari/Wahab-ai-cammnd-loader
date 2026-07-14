@@ -1,4 +1,5 @@
-const { normalizeJid, resolveLidToPn, extractNumber } = require('../../utils/jidHelper');
+const { normalizeJid, extractNumber } = require('../../utils/jidHelper');
+const { checkBotAdmin, findParticipant } = require('../../utils/groupHelper');
 
 module.exports = {
   name: 'add',
@@ -15,26 +16,9 @@ module.exports = {
       }
 
       const groupMetadata = await sock.groupMetadata(extra.from);
-      const botJid = normalizeJid(sock.user.id);
-      const botNumber = extractNumber(botJid);
+      const { isAdmin } = await checkBotAdmin(sock, groupMetadata);
 
-      let botParticipant = groupMetadata.participants.find(
-        p => extractNumber(p.id) === botNumber
-      );
-
-      if (!botParticipant) {
-        for (const p of groupMetadata.participants) {
-          if (p.id.includes('@lid')) {
-            const resolved = await resolveLidToPn(sock, p.id);
-            if (extractNumber(resolved) === botNumber) {
-              botParticipant = p;
-              break;
-            }
-          }
-        }
-      }
-
-      if (!botParticipant || !['admin', 'superadmin'].includes(botParticipant.admin)) {
+      if (!isAdmin) {
         return extra.reply('❌ Bot ko pehle group admin banayein, phir add command kaam karegi!');
       }
 
@@ -42,7 +26,6 @@ module.exports = {
         return extra.reply('❌ Number(s) dein jinhe add karna hai!\n\nUsage:\n.add 923001234567\n.add 923001234567 923009876543 923005554433');
       }
 
-      // Har argument se number nikalna, khaali/invalid hata dena
       const numbers = args
         .map(a => a.replace(/[^0-9]/g, ''))
         .filter(n => n && n.length >= 8);
@@ -51,20 +34,14 @@ module.exports = {
         return extra.reply('❌ Sahi number(s) dein, country code ke saath!\n\nExample: .add 923001234567');
       }
 
-      const results = {
-        added: [],
-        alreadyIn: [],
-        failed: []
-      };
+      const results = { added: [], alreadyIn: [], failed: [] };
 
       for (const num of numbers) {
         const targetJid = normalizeJid(`${num}@s.whatsapp.net`);
         const targetNumber = extractNumber(targetJid);
 
-        const alreadyIn = groupMetadata.participants.some(
-          p => extractNumber(p.id) === targetNumber
-        );
-        if (alreadyIn) {
+        const existing = await findParticipant(sock, groupMetadata.participants, targetNumber);
+        if (existing) {
           results.alreadyIn.push(targetNumber);
           continue;
         }
@@ -82,7 +59,6 @@ module.exports = {
           results.failed.push(targetNumber);
         }
 
-        // Thoda delay har add ke darmiyan, taake WhatsApp rate-limit/ban na kare
         await new Promise(r => setTimeout(r, 1500));
       }
 
@@ -100,8 +76,8 @@ module.exports = {
       return extra.reply(summary.trim());
 
     } catch (error) {
-      console.error('add command error:', error.message);
-      return extra.reply('❌ Add karte waqt error aya. Bot ke admin permissions check karein.');
+      console.error('add command error:', error);
+      return extra.reply(`❌ DEBUG ERROR: ${error.message}`);
     }
   }
 };
