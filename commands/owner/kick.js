@@ -1,4 +1,5 @@
-const { normalizeJid, resolveLidToPn, extractNumber } = require('../../utils/jidHelper');
+const { extractNumber } = require('../../utils/jidHelper');
+const { checkBotAdmin, findParticipant, resolveTargetJid } = require('../../utils/groupHelper');
 
 module.exports = {
   name: 'kick',
@@ -14,38 +15,20 @@ module.exports = {
         return extra.reply('❌ Yeh command sirf group mein kaam karti hai!');
       }
 
-      // Bot khud group mein admin hai ya nahi, yeh check karna
       const groupMetadata = await sock.groupMetadata(extra.from);
-      const botJid = normalizeJid(sock.user.id);
-      const botNumber = extractNumber(botJid);
+      const { isAdmin, botNumber } = await checkBotAdmin(sock, groupMetadata);
 
-      const botParticipant = groupMetadata.participants.find(
-        p => extractNumber(p.id) === botNumber
-      );
-
-      if (!botParticipant || !['admin', 'superadmin'].includes(botParticipant.admin)) {
+      if (!isAdmin) {
         return extra.reply('❌ Bot ko pehle group admin banayein, phir kick command kaam karegi!');
       }
 
-      const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
-      let targetJid = contextInfo?.mentionedJid?.[0] || contextInfo?.participant;
-
-      if (!targetJid && args[0]) {
-        const num = args[0].replace(/[^0-9]/g, '');
-        if (num) targetJid = `${num}@s.whatsapp.net`;
-      }
-
+      const targetJid = await resolveTargetJid(sock, msg, args);
       if (!targetJid) {
         return extra.reply('❌ Kisi ko mention karein ya unke message ko reply karke .kick likhein!\n\nUsage:\n.kick @user\n.kick (reply to someone)');
       }
 
-      if (targetJid.includes('@lid')) {
-        targetJid = await resolveLidToPn(sock, targetJid);
-      }
-      targetJid = normalizeJid(targetJid);
       const targetNumber = extractNumber(targetJid);
 
-      // Safety checks
       if (targetNumber === botNumber) {
         return extra.reply('❌ Main khud ko kick nahi kar sakta! 😅');
       }
@@ -53,19 +36,17 @@ module.exports = {
         return extra.reply('❌ Aap khud ko kick nahi kar sakte!');
       }
 
-      const targetParticipant = groupMetadata.participants.find(
-        p => extractNumber(p.id) === targetNumber
-      );
+      const targetParticipant = await findParticipant(sock, groupMetadata.participants, targetNumber);
       if (!targetParticipant) {
         return extra.reply('❌ Yeh user is group mein maujood nahi hai!');
       }
 
-      await sock.groupParticipantsUpdate(extra.from, [targetJid], 'remove');
+      await sock.groupParticipantsUpdate(extra.from, [targetParticipant.id], 'remove');
       return extra.reply(`✅ Successfully removed *${targetNumber}* from the group!`);
 
     } catch (error) {
-      console.error('kick command error:', error.message);
-      return extra.reply('❌ Kick karte waqt error aya. Bot ke admin permissions check karein.');
+      console.error('kick command error:', error);
+      return extra.reply(`❌ DEBUG ERROR: ${error.message}`);
     }
   }
 };
