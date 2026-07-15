@@ -235,7 +235,7 @@ const handleMessage = async (sock, msg) => {
           const persona = getPersona().replace(/\{name\}/g, userName);
           const replyText = await getVoiceAIReply(audioBuffer, persona);
 
-          await sock.sendMessage(from, { text: `🎙️ DEBUG: Gemini replied: ${replyText ? replyText.slice(0, 100) : 'NULL/EMPTY'}` }, { quoted: msg });
+          await sock.sendMessage(from, { text: `🎙️ DEBUG: Gemini replied: ${replyText ? replyText.slice(0, 100) : 'NULL/EMPTY — console logs check karein for full response object'}` }, { quoted: msg });
 
           if (replyText) {
             // 3. Text-to-Speech (gTTS, Urdu voice)
@@ -508,7 +508,7 @@ const initializeAntiDelete = (sock) => {
         messageStore.delete(msgId);
       }
     } catch (err) {
-   console.error('AntiDelete Error:', err);
+      console.error('AntiDelete Error:', err);
     }
   });
 };
