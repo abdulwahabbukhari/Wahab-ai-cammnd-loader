@@ -42,21 +42,20 @@ module.exports = {
     }
 
     // .chatbot voice on / .chatbot voice off (target pehle, phir option)
-   // . if (args[0].toLowerCase() === 'voice') {
-    // .  const voiceOption = args[1].toLowerCase();
-   //.   if (voiceOption !== 'on' && voiceOption !== 'off') {
-      // .  return extra.reply('❌ Invalid option! Use .chatbot voice on or .chatbot voice off.');
-    //.  }
-    //  const value = voiceOption === 'on';
-     // . const result = updateConfig('voiceChatbot', value);
-      //.config.voiceChatbot = value;
-     // . return extra.reply(
-        // .`🎙️ DEBUG updateConfig result: ${JSON.stringify(result)}\n\n` +
-       // . (value
-        // .  ? '✅ *Voice-to-Voice Chatbot ENABLED!*\nAb voice notes ka jawab bhi voice note mein milega.'
-         // . : '❌ *Voice-to-Voice Chatbot DISABLED!*')
-   // .   );
-   //. }
+    if (args[0].toLowerCase() === 'voice') {
+      const voiceOption = args[1].toLowerCase();
+      if (voiceOption !== 'on' && voiceOption !== 'off') {
+        return extra.reply('❌ Invalid option! Use .chatbot voice on or .chatbot voice off.');
+      }
+      const value = voiceOption === 'on';
+      updateConfig('voiceChatbot', value);
+      config.voiceChatbot = value;
+      return extra.reply(
+        value
+          ? '✅ *Voice-to-Voice Chatbot ENABLED!*\nAb voice notes ka jawab bhi voice note mein milega.'
+          : '❌ *Voice-to-Voice Chatbot DISABLED!*'
+      );
+    }
 
     const option = args[0].toLowerCase();
     const target = args[1].toLowerCase();
