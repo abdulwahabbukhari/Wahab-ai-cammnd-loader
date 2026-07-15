@@ -61,12 +61,11 @@ async function textToSpeech(text) {
     const buffer = fs.readFileSync(tempPath);
     return buffer;
   } catch (err) {
-    console.error('[VOICE] TTS error:', err.message);
-    return null;
+    console.error('[VOICE] TTS error:', err);
+    throw err; // Debug ke liye upar throw karo taake handler.js mein exact error dikhe
   } finally {
     if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
   }
 }
 
 module.exports = { getVoiceAIReply, textToSpeech };
- 
