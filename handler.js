@@ -244,7 +244,7 @@ const handleMessage = async (sock, msg) => {
             await sock.sendMessage(from, { text: `🎙️ DEBUG: TTS buffer: ${voiceBuffer ? voiceBuffer.length + ' bytes' : 'NULL/FAILED'}` }, { quoted: msg });
 
             if (voiceBuffer) {
-              await sock.sendMessage(from, { audio: voiceBuffer, mimetype: 'audio/mp4', ptt: true }, { quoted: msg });
+              await sock.sendMessage(from, { audio: voiceBuffer, mimetype: 'audio/ogg; codecs=opus', ptt: true }, { quoted: msg });
             } else {
               // TTS fail ho jaye to kam az kam text reply de dein
               await sock.sendMessage(from, { text: replyText }, { quoted: msg });
