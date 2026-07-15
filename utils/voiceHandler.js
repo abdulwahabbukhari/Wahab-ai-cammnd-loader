@@ -54,7 +54,10 @@ async function textToSpeech(text) {
   const tempPath = path.join(tempDir, `tts_${Date.now()}.mp3`);
 
   try {
-    const gtts = new gTTS(text, 'ur'); // 'ur' = Urdu pronunciation (Roman Urdu ke liye bhi behtareen)
+    // Note: npm 'gtts' package 'ur' (Urdu) support nahi karta (purana/limited port hai).
+    // 'hi' (Hindi) use karte hain — bolne mein Urdu se almost identical hai,
+    // sirf likhne ka script farq hota hai, awaz mein koi farq mehsoos nahi hoga.
+    const gtts = new gTTS(text, 'hi');
 
     await new Promise((resolve, reject) => {
       gtts.save(tempPath, (err) => {
