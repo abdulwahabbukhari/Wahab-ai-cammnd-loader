@@ -5,6 +5,7 @@ const { loadData, saveData } = require('./utils/anticallManager');
 const fs = require('fs');
 const path = require('path');
 const { normalizeJid, resolveLidToPn, extractNumber } = require('./utils/jidHelper');
+const { getVoiceAIReply, textToSpeech } = require('./utils/voiceHandler');
 
 // Load all commands
 const commands = loadCommands();
@@ -188,6 +189,58 @@ const handleMessage = async (sock, msg) => {
         isCmd = true;
         commandName = possibleCmd;
         args = tempArgs.slice(1);
+      }
+    }
+
+    // ================= 0. VOICE-TO-VOICE CHATBOT =================
+    // Agar user voice note (audio message) bheje, to Groq Whisper se
+    // text mein convert karte hain, AI se reply lete hain, phir usay
+    // female voice (Edge TTS) mein convert karke voice note wapas
+    // bhejte hain. DM mein hamesha; Group mein sirf mention/reply par.
+    const audioContent = contentMsg?.audioMessage;
+    if (audioContent && !isFromMe && (activeConfig.autoReplyDM || activeConfig.autoReplyGroup)) {
+      const botNumber = extractNumber(sock.user.id);
+      const mentionedJids = contentMsg?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+      let isMentioned = mentionedJids.some(jid => extractNumber(jid) === botNumber);
+      let replyParticipant = contentMsg?.extendedTextMessage?.contextInfo?.participant;
+      if (replyParticipant && replyParticipant.includes('@lid')) {
+        replyParticipant = await resolveLidToPn(sock, replyParticipant);
+      }
+      const isReplyToBot = replyParticipant && extractNumber(replyParticipant) === botNumber;
+
+      const voiceDmAllowed = !isGroup && activeConfig.autoReplyDM;
+      const voiceGroupAllowed = isGroup && activeConfig.autoReplyGroup && (isMentioned || isReplyToBot);
+
+      if (voiceDmAllowed || voiceGroupAllowed) {
+        try {
+          await sock.sendPresenceUpdate('recording', from);
+
+          const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+          const audioBuffer = await downloadMediaMessage(
+            { message: contentMsg, key: msg.key },
+            'buffer',
+            {},
+            { logger: undefined, reuploadRequest: sock.updateMediaMessage }
+          );
+
+          // 1 & 2. Gemini AI seedha audio samajh kar text reply deta hai (STT + AI ek sath)
+          const persona = getPersona().replace(/\{name\}/g, userName);
+          const replyText = await getVoiceAIReply(audioBuffer, persona);
+
+          if (replyText) {
+            // 3. Text-to-Speech (gTTS, Urdu voice)
+            const voiceBuffer = await textToSpeech(replyText);
+
+            if (voiceBuffer) {
+              await sock.sendMessage(from, { audio: voiceBuffer, mimetype: 'audio/mp4', ptt: true }, { quoted: msg });
+            } else {
+              // TTS fail ho jaye to kam az kam text reply de dein
+              await sock.sendMessage(from, { text: replyText }, { quoted: msg });
+            }
+          }
+        } catch (err) {
+          console.error('Voice-to-voice error:', err.message);
+        }
       }
     }
 
