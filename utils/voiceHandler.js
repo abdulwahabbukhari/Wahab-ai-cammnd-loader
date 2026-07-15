@@ -16,8 +16,7 @@ const gTTS = require('gtts');
 async function getVoiceAIReply(audioBuffer, personaPrompt) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    console.error('[VOICE] GEMINI_API_KEY .env mein set nahi hai!');
-    return null;
+    throw new Error('GEMINI_API_KEY .env mein set nahi hai!');
   }
 
   try {
@@ -32,10 +31,16 @@ async function getVoiceAIReply(audioBuffer, personaPrompt) {
       ]
     });
 
-    return response.text?.trim() || null;
+    if (!response.text) {
+      const finishReason = response.candidates?.[0]?.finishReason;
+      const safetyRatings = JSON.stringify(response.candidates?.[0]?.safetyRatings || response.promptFeedback || {});
+      throw new Error(`Gemini empty response | finishReason: ${finishReason} | safety: ${safetyRatings}`);
+    }
+
+    return response.text.trim();
   } catch (err) {
     console.error('[VOICE] Gemini AI error:', err.message);
-    return null;
+    throw err; // Debug ke liye upar throw karo taake handler.js mein exact error dikhe
   }
 }
 
