@@ -25,7 +25,7 @@ async function getVoiceAIReply(audioBuffer, personaPrompt) {
     const audioBase64 = audioBuffer.toString('base64');
 
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       contents: [
         { inlineData: { mimeType: 'audio/ogg', data: audioBase64 } },
         { text: `${personaPrompt}\n\nUser ne yeh voice message bheja hai. Iska jawab Roman Urdu mein short, natural aur friendly andaz mein dein — jaise ek insaan baat kar raha ho.` }
