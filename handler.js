@@ -198,6 +198,9 @@ const handleMessage = async (sock, msg) => {
     // female voice (Edge TTS) mein convert karke voice note wapas
     // bhejte hain. DM mein hamesha; Group mein sirf mention/reply par.
     const audioContent = contentMsg?.audioMessage;
+    if (isGroup === false || isGroup === true) {
+      // Har DM/Group text/voice message par ek chhota debug marker (sirf audio ke liye chalega neeche)
+    }
     if (audioContent && !isFromMe && (activeConfig.autoReplyDM || activeConfig.autoReplyGroup)) {
       const botNumber = extractNumber(sock.user.id);
       const mentionedJids = contentMsg?.extendedTextMessage?.contextInfo?.mentionedJid || [];
@@ -211,9 +214,12 @@ const handleMessage = async (sock, msg) => {
       const voiceDmAllowed = !isGroup && activeConfig.autoReplyDM;
       const voiceGroupAllowed = isGroup && activeConfig.autoReplyGroup && (isMentioned || isReplyToBot);
 
+      console.log(`[🎙️ VOICE DEBUG] audioDetected: true | isGroup: ${isGroup} | voiceDmAllowed: ${voiceDmAllowed} | voiceGroupAllowed: ${voiceGroupAllowed}`);
+
       if (voiceDmAllowed || voiceGroupAllowed) {
         try {
           await sock.sendPresenceUpdate('recording', from);
+          await sock.sendMessage(from, { text: '🎙️ DEBUG: Voice note detected, processing...' }, { quoted: msg });
 
           const { downloadMediaMessage } = require('@whiskeysockets/baileys');
           const audioBuffer = await downloadMediaMessage(
@@ -223,13 +229,19 @@ const handleMessage = async (sock, msg) => {
             { logger: undefined, reuploadRequest: sock.updateMediaMessage }
           );
 
+          await sock.sendMessage(from, { text: `🎙️ DEBUG: Audio downloaded, size: ${audioBuffer?.length || 0} bytes. Calling Gemini...` }, { quoted: msg });
+
           // 1 & 2. Gemini AI seedha audio samajh kar text reply deta hai (STT + AI ek sath)
           const persona = getPersona().replace(/\{name\}/g, userName);
           const replyText = await getVoiceAIReply(audioBuffer, persona);
 
+          await sock.sendMessage(from, { text: `🎙️ DEBUG: Gemini replied: ${replyText ? replyText.slice(0, 100) : 'NULL/EMPTY'}` }, { quoted: msg });
+
           if (replyText) {
             // 3. Text-to-Speech (gTTS, Urdu voice)
             const voiceBuffer = await textToSpeech(replyText);
+
+            await sock.sendMessage(from, { text: `🎙️ DEBUG: TTS buffer: ${voiceBuffer ? voiceBuffer.length + ' bytes' : 'NULL/FAILED'}` }, { quoted: msg });
 
             if (voiceBuffer) {
               await sock.sendMessage(from, { audio: voiceBuffer, mimetype: 'audio/mp4', ptt: true }, { quoted: msg });
@@ -239,7 +251,8 @@ const handleMessage = async (sock, msg) => {
             }
           }
         } catch (err) {
-          console.error('Voice-to-voice error:', err.message);
+          console.error('Voice-to-voice error:', err);
+          await sock.sendMessage(from, { text: `🎙️ DEBUG ERROR: ${err.message}\n\n${err.stack?.split('\n').slice(0,4).join('\n')}` }, { quoted: msg });
         }
       }
     }
@@ -495,7 +508,7 @@ const initializeAntiDelete = (sock) => {
         messageStore.delete(msgId);
       }
     } catch (err) {
-      console.error('AntiDelete Error:', err);
+   console.error('AntiDelete Error:', err);
     }
   });
 };
