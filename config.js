@@ -38,6 +38,12 @@ module.exports = {
     autoReplyDM: false,
     autoReplyGroup: false,
 
+    // 🎙️ VOICE-TO-VOICE CHATBOT
+    // true  = voice note ka jawab bhi voice note mein milega (Gemini AI + gTTS)
+    // false = voice notes par koi reply nahi
+    // Control: .chatbot voice on / .chatbot voice off
+    voiceChatbot: false,
+
     messages: {
       wait: '⏳ Please wait...',
       success: '✅ Success!',

@@ -193,15 +193,13 @@ const handleMessage = async (sock, msg) => {
     }
 
     // ================= 0. VOICE-TO-VOICE CHATBOT =================
-    // Agar user voice note (audio message) bheje, to Groq Whisper se
-    // text mein convert karte hain, AI se reply lete hain, phir usay
-    // female voice (Edge TTS) mein convert karke voice note wapas
-    // bhejte hain. DM mein hamesha; Group mein sirf mention/reply par.
+    // Agar user voice note (audio message) bheje, to Gemini AI seedha
+    // audio samajh kar Roman Urdu mein jawab deta hai, phir usay awaz
+    // (gTTS + ffmpeg OGG/Opus conversion) mein convert karke voice note
+    // wapas bhejte hain. DM aur Group dono mein — Group mein sirf
+    // mention/reply par. Control: .chatbot voice on/off
     const audioContent = contentMsg?.audioMessage;
-    if (isGroup === false || isGroup === true) {
-      // Har DM/Group text/voice message par ek chhota debug marker (sirf audio ke liye chalega neeche)
-    }
-    if (audioContent && !isFromMe && (activeConfig.autoReplyDM || activeConfig.autoReplyGroup)) {
+    if (audioContent && !isFromMe && activeConfig.voiceChatbot) {
       const botNumber = extractNumber(sock.user.id);
       const mentionedJids = contentMsg?.extendedTextMessage?.contextInfo?.mentionedJid || [];
       let isMentioned = mentionedJids.some(jid => extractNumber(jid) === botNumber);
@@ -211,15 +209,12 @@ const handleMessage = async (sock, msg) => {
       }
       const isReplyToBot = replyParticipant && extractNumber(replyParticipant) === botNumber;
 
-      const voiceDmAllowed = !isGroup && activeConfig.autoReplyDM;
-      const voiceGroupAllowed = isGroup && activeConfig.autoReplyGroup && (isMentioned || isReplyToBot);
-
-      console.log(`[🎙️ VOICE DEBUG] audioDetected: true | isGroup: ${isGroup} | voiceDmAllowed: ${voiceDmAllowed} | voiceGroupAllowed: ${voiceGroupAllowed}`);
+      const voiceDmAllowed = !isGroup;
+      const voiceGroupAllowed = isGroup && (isMentioned || isReplyToBot);
 
       if (voiceDmAllowed || voiceGroupAllowed) {
         try {
           await sock.sendPresenceUpdate('recording', from);
-          await sock.sendMessage(from, { text: '🎙️ DEBUG: Voice note detected, processing...' }, { quoted: msg });
 
           const { downloadMediaMessage } = require('@whiskeysockets/baileys');
           const audioBuffer = await downloadMediaMessage(
@@ -229,19 +224,13 @@ const handleMessage = async (sock, msg) => {
             { logger: undefined, reuploadRequest: sock.updateMediaMessage }
           );
 
-          await sock.sendMessage(from, { text: `🎙️ DEBUG: Audio downloaded, size: ${audioBuffer?.length || 0} bytes. Calling Gemini...` }, { quoted: msg });
-
           // 1 & 2. Gemini AI seedha audio samajh kar text reply deta hai (STT + AI ek sath)
           const persona = getPersona().replace(/\{name\}/g, userName);
           const replyText = await getVoiceAIReply(audioBuffer, persona);
 
-          await sock.sendMessage(from, { text: `🎙️ DEBUG: Gemini replied: ${replyText ? replyText.slice(0, 100) : 'NULL/EMPTY — console logs check karein for full response object'}` }, { quoted: msg });
-
           if (replyText) {
-            // 3. Text-to-Speech (gTTS, Urdu voice)
+            // 3. Text-to-Speech (gTTS + ffmpeg OGG/Opus)
             const voiceBuffer = await textToSpeech(replyText);
-
-            await sock.sendMessage(from, { text: `🎙️ DEBUG: TTS buffer: ${voiceBuffer ? voiceBuffer.length + ' bytes' : 'NULL/FAILED'}` }, { quoted: msg });
 
             if (voiceBuffer) {
               await sock.sendMessage(from, { audio: voiceBuffer, mimetype: 'audio/ogg; codecs=opus', ptt: true }, { quoted: msg });
@@ -251,8 +240,7 @@ const handleMessage = async (sock, msg) => {
             }
           }
         } catch (err) {
-          console.error('Voice-to-voice error:', err);
-          await sock.sendMessage(from, { text: `🎙️ DEBUG ERROR: ${err.message}\n\n${err.stack?.split('\n').slice(0,4).join('\n')}` }, { quoted: msg });
+          console.error('Voice-to-voice error:', err.message);
         }
       }
     }
