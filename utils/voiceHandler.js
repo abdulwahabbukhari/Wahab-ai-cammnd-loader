@@ -3,6 +3,9 @@ const path = require('path');
 const os = require('os');
 const { GoogleGenAI } = require('@google/genai');
 const gTTS = require('gtts');
+const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+const ffmpeg = require('fluent-ffmpeg');
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 /**
  * Voice note (audio buffer) ko seedha Gemini AI ko bhejti hai — Gemini khud
@@ -51,7 +54,8 @@ async function getVoiceAIReply(audioBuffer, personaPrompt) {
  */
 async function textToSpeech(text) {
   const tempDir = path.join(os.tmpdir());
-  const tempPath = path.join(tempDir, `tts_${Date.now()}.mp3`);
+  const mp3Path = path.join(tempDir, `tts_${Date.now()}.mp3`);
+  const oggPath = path.join(tempDir, `tts_${Date.now()}.ogg`);
 
   try {
     // Note: npm 'gtts' package 'ur' (Urdu) support nahi karta (purana/limited port hai).
@@ -60,19 +64,32 @@ async function textToSpeech(text) {
     const gtts = new gTTS(text, 'hi');
 
     await new Promise((resolve, reject) => {
-      gtts.save(tempPath, (err) => {
+      gtts.save(mp3Path, (err) => {
         if (err) return reject(err);
         resolve();
       });
     });
 
-    const buffer = fs.readFileSync(tempPath);
+    // WhatsApp PTT (voice note) Android par MP3 ke sath reliably kaam nahi karta —
+    // OGG/Opus mein convert karna zaroori hai taake har device par chale.
+    await new Promise((resolve, reject) => {
+      ffmpeg(mp3Path)
+        .audioCodec('libopus')
+        .audioChannels(1)
+        .toFormat('ogg')
+        .on('end', resolve)
+        .on('error', reject)
+        .save(oggPath);
+    });
+
+    const buffer = fs.readFileSync(oggPath);
     return buffer;
   } catch (err) {
     console.error('[VOICE] TTS error:', err);
     throw err; // Debug ke liye upar throw karo taake handler.js mein exact error dikhe
   } finally {
-    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+    if (fs.existsSync(mp3Path)) fs.unlinkSync(mp3Path);
+    if (fs.existsSync(oggPath)) fs.unlinkSync(oggPath);
   }
 }
 
