@@ -199,6 +199,12 @@ const handleMessage = async (sock, msg) => {
     // wapas bhejte hain. DM aur Group dono mein — Group mein sirf
     // mention/reply par. Control: .chatbot voice on/off
     const audioContent = contentMsg?.audioMessage;
+
+    // TEMP DEBUG: agar audio message aaye, bata do detect hua ya nahi
+    if (audioContent) {
+      await sock.sendMessage(from, { text: `🎙️ DEBUG: Audio detected! voiceChatbot config: ${activeConfig.voiceChatbot} | isFromMe: ${isFromMe}` }, { quoted: msg });
+    }
+
     if (audioContent && !isFromMe && activeConfig.voiceChatbot) {
       const botNumber = extractNumber(sock.user.id);
       const mentionedJids = contentMsg?.extendedTextMessage?.contextInfo?.mentionedJid || [];
