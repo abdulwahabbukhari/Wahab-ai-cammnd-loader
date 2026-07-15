@@ -200,13 +200,6 @@ const handleMessage = async (sock, msg) => {
     // mention/reply par. Control: .chatbot voice on/off
     const audioContent = contentMsg?.audioMessage;
 
-    // TEMP DEBUG: agar audio message aaye, bata do detect hua ya nahi
-    if (audioContent) {
-      const resolvedPath = require.resolve('./config');
-      const allKeys = Object.keys(activeConfig);
-      await sock.sendMessage(from, { text: `🎙️ DEBUG: Audio detected!\nvoiceChatbot: ${activeConfig.voiceChatbot}\nisFromMe: ${isFromMe}\nresolvedConfigPath: ${resolvedPath}\nconfigKeys: ${allKeys.join(', ')}` }, { quoted: msg });
-    }
-
     if (audioContent && !isFromMe && activeConfig.voiceChatbot) {
       const botNumber = extractNumber(sock.user.id);
       const mentionedJids = contentMsg?.extendedTextMessage?.contextInfo?.mentionedJid || [];
