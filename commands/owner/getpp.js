@@ -1,83 +1,86 @@
-const axios = require('axios');
-const { normalizeJid, resolveLidToPn, extractNumber } = require('../../utils/jidHelper');
-
 module.exports = {
   name: 'getpp',
-  aliases: ['gp', 'getpic', 'pp'],
-  category: 'owner',
-  ownerOnly: true,
-  description: 'Get profile picture of a user (reply or tag)',
-  usage: '.getpp (reply to message or tag user)',
+  aliases: ['getdp', 'pp', 'dp'],
+  category: 'general',
+  description: 'Get user or group profile picture',
+  usage: '.getpp 923xxxxxxxxx OR .getpp group link',
 
-  async execute(sock, msg, args, extra) {
+  async execute(sock, msg, args, { from, reply }) {
     try {
-      let targetUser = null;
-
-      // 1. Check if it's a reply
-      const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
-      const quotedMessage = contextInfo?.quotedMessage;
-
-      if (quotedMessage && contextInfo?.participant) {
-        targetUser = contextInfo.participant;
-      } else if (contextInfo?.mentionedJid && contextInfo.mentionedJid.length > 0) {
-        // 2. Check if user is tagged
-        targetUser = contextInfo.mentionedJid[0];
-      } else if (args[0]) {
-        // 3. Number given as argument
-        const num = args[0].replace(/[^0-9]/g, '');
-        if (num) targetUser = `${num}@s.whatsapp.net`;
-      } else {
-        // 4. Fallback: sender of current message
-        targetUser = extra.sender;
+      // Check if user provided a number or link
+      if (args.length === 0) {
+        return reply(
+          '❌ Example:\n\n.getpp 923001234567\n\nOR\n\n.getpp https://chat.whatsapp.com/xxxxxxxx'
+        );
       }
 
-      if (!targetUser) {
-        return extra.reply('❌ Could not identify target user. Please reply to a message, tag a user, or give a number.');
-      }
+      const q = args.join(' ');
+      let targetJid;
 
-      // LID format ho to asal phone number mein resolve karo
-      if (targetUser.includes('@lid')) {
-        targetUser = await resolveLidToPn(sock, targetUser);
-      }
-      targetUser = normalizeJid(targetUser);
-      const targetNumber = extractNumber(targetUser);
+      // =========================
+      // GROUP LINK HANDLING
+      // =========================
+      if (q.includes("chat.whatsapp.com/")) {
+        const code = q.split("https://chat.whatsapp.com/")[1]?.trim();
 
-      try {
-        // 'image' (high-res) try karo, na mile to 'preview' try karo
-        let ppUrl;
+        if (!code) {
+          return reply("❌ Invalid group link.");
+        }
+
         try {
-          ppUrl = await sock.profilePictureUrl(targetUser, 'image');
-        } catch (_) { /* preview try karenge neeche */ }
+          // Fetch group info using the invite code
+          const groupInfo = await sock.groupGetInviteInfo(code);
 
-        if (!ppUrl) {
-          try {
-            ppUrl = await sock.profilePictureUrl(targetUser, 'preview');
-          } catch (_) { /* neeche handle hoga */ }
+          if (!groupInfo?.id) {
+            return reply("❌ Group not found.");
+          }
+          targetJid = groupInfo.id;
+          
+        } catch (error) {
+          return reply("❌ Failed to get group info. Link might be revoked or invalid.");
         }
-
-        if (!ppUrl) {
-          return extra.reply(`❌ Profile picture not found for *${targetNumber}*.`);
-        }
-
-        // Download the profile picture as buffer (more reliable than direct URL send)
-        const response = await axios.get(ppUrl, { responseType: 'arraybuffer' });
-        const buffer = Buffer.from(response.data);
-
-        // Send the profile picture
-        await sock.sendMessage(extra.from, {
-          image: buffer,
-          caption: `👤 Profile picture of @${targetNumber}`,
-          mentions: [targetUser]
-        }, { quoted: msg });
-
-      } catch (profileError) {
-        console.error('getpp fetch error:', profileError.message);
-        return extra.reply(`❌ Profile picture not found for *${targetNumber}*.\nHo sakta hai DP private ho ya set na ho.`);
       }
 
-    } catch (error) {
-      console.error('getpp command error:', error.message);
-      return extra.reply('❌ Kuch masla ho gaya profile picture fetch karte waqt.');
+      // =========================
+      // PHONE NUMBER HANDLING
+      // =========================
+      else {
+        // Clean the number (remove spaces, +, etc)
+        let number = q.replace(/[^0-9]/g, "");
+
+        if (number.length < 10 || number.length > 15) {
+          return reply("❌ Invalid number. Please provide a valid phone number.");
+        }
+
+        targetJid = `${number}@s.whatsapp.net`;
+      }
+
+      // =========================
+      // GET PROFILE PHOTO
+      // =========================
+      let pp;
+      try {
+        // Fetch the high-quality image URL
+        pp = await sock.profilePictureUrl(targetJid, "image");
+      } catch {
+        return reply("❌ Profile picture not found. (User may have hidden it or doesn't have one).");
+      }
+
+      // =========================
+      // SEND IMAGE
+      // =========================
+      await sock.sendMessage(
+        from,
+        {
+          image: { url: pp },
+          caption: `╭━━〔 *PROFILE PICTURE* 〕━━┈⊷\n┃\n┃◈ • 🆔 ${targetJid}\n┃◈ • ✅ Profile fetched successfully\n┃\n╰──────────────┈⊷\n> 🤖 𝙿𝙾𝚆𝙴𝚁𝙴𝙳 𝙱𝚈 𝚀𝙰𝙳𝙴𝙴𝚁 𝙰𝙸`
+        },
+        { quoted: msg }
+      );
+
+    } catch (err) {
+      console.error("GETPP CMD ERROR:", err.message);
+      return reply("❌ Failed to fetch profile picture due to an unexpected error.");
     }
   }
 };
