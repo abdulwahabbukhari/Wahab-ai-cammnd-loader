@@ -7,13 +7,12 @@ function updateConfig(setting, value) {
   try {
     let configData = fs.readFileSync(configPath, 'utf8');
     const regex = new RegExp(`(${setting}:\\s*)(true|false)`);
-    const matched = regex.test(configData);
     configData = configData.replace(regex, `$1${value}`);
     fs.writeFileSync(configPath, configData, 'utf8');
-    return { success: true, matched, configPath };
+    return true;
   } catch (err) {
     console.error(`Error updating config:`, err);
-    return { success: false, error: err.message, configPath };
+    return false;
   }
 }
 
@@ -22,38 +21,20 @@ module.exports = {
   aliases: ['autoreply'],
   category: 'owner',
   ownerOnly: true,
-  description: 'Enable or disable AI Auto-Reply separately for DMs and Groups',
+  description: 'Enable or disable AI Auto-Reply (text + voice) separately for DMs and Groups',
 
   async execute(sock, msg, args, extra) {
     if (!args[0] || !args[1]) {
       return extra.reply(
         `🤖 *ᴀ.ɪ ᴀᴜᴛᴏ-ʀᴇᴘʟʏ*\n\n` +
         `DM Status: ${config.autoReplyDM ? 'ON ✅' : 'OFF ❌'}\n` +
-        `Group Status: ${config.autoReplyGroup ? 'ON ✅' : 'OFF ❌'}\n` +
-        `Voice Status: ${config.voiceChatbot ? 'ON ✅' : 'OFF ❌'}\n\n` +
+        `Group Status: ${config.autoReplyGroup ? 'ON ✅' : 'OFF ❌'}\n\n` +
+        `(Text aur Voice dono is se control hote hain — koi alag command nahi)\n\n` +
         `Usage:\n` +
         `.chatbot on dms\n` +
         `.chatbot off dms\n` +
         `.chatbot on gc\n` +
-        `.chatbot off gc\n` +
-        `.chatbot voice on\n` +
-        `.chatbot voice off`
-      );
-    }
-
-    // .chatbot voice on / .chatbot voice off (target pehle, phir option)
-    if (args[0].toLowerCase() === 'voice') {
-      const voiceOption = args[1].toLowerCase();
-      if (voiceOption !== 'on' && voiceOption !== 'off') {
-        return extra.reply('❌ Invalid option! Use .chatbot voice on or .chatbot voice off.');
-      }
-      const value = voiceOption === 'on';
-      updateConfig('voiceChatbot', value);
-      config.voiceChatbot = value;
-      return extra.reply(
-        value
-          ? '✅ *Voice-to-Voice Chatbot ENABLED!*\nAb voice notes ka jawab bhi voice note mein milega.'
-          : '❌ *Voice-to-Voice Chatbot DISABLED!*'
+        `.chatbot off gc`
       );
     }
 
@@ -71,21 +52,27 @@ module.exports = {
     const value = option === 'on';
 
     if (target === 'dms') {
+      // Ek hi command se text-chatbot aur voice-chatbot dono DM ke liye control hote hain
       updateConfig('autoReplyDM', value);
+      updateConfig('voiceChatbotDM', value);
       config.autoReplyDM = value;
+      config.voiceChatbotDM = value;
       return extra.reply(
         value
-          ? '✅ *AI Auto-Reply ENABLED for DMs!*\nBot will reply to private messages.'
+          ? '✅ *AI Auto-Reply ENABLED for DMs!*\nText message → text reply.\nVoice note → voice reply.'
           : '❌ *AI Auto-Reply DISABLED for DMs!*'
       );
     }
 
     if (target === 'gc') {
+      // Ek hi command se text-chatbot aur voice-chatbot dono Group ke liye control hote hain
       updateConfig('autoReplyGroup', value);
+      updateConfig('voiceChatbotGroup', value);
       config.autoReplyGroup = value;
+      config.voiceChatbotGroup = value;
       return extra.reply(
         value
-          ? '✅ *AI Auto-Reply ENABLED for Groups!*\nBot will reply in groups when mentioned or replied to.'
+          ? '✅ *AI Auto-Reply ENABLED for Groups!*\nMention/reply karne par:\nText message → text reply.\nVoice note → voice reply.'
           : '❌ *AI Auto-Reply DISABLED for Groups!*'
       );
     }
