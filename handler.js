@@ -195,23 +195,27 @@ const handleMessage = async (sock, msg) => {
     // ================= 0. VOICE-TO-VOICE CHATBOT =================
     // Agar user voice note (audio message) bheje, to Gemini AI seedha
     // audio samajh kar Roman Urdu mein jawab deta hai, phir usay awaz
-    // (gTTS + ffmpeg OGG/Opus conversion) mein convert karke voice note
-    // wapas bhejte hain. DM aur Group dono mein — Group mein sirf
-    // mention/reply par. Control: .chatbot voice on/off
+    // (gTTS ke through) mein convert karke voice note wapas bhejte hain.
+    // DM aur Group dono mein — Group mein sirf mention/reply par.
+    // Control: .chatbot on/off dms aur .chatbot on/off gc (koi alag command nahi)
     const audioContent = contentMsg?.audioMessage;
 
-    if (audioContent && !isFromMe && activeConfig.voiceChatbot) {
+    if (audioContent && !isFromMe) {
       const botNumber = extractNumber(sock.user.id);
-      const mentionedJids = contentMsg?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+      // contextInfo kisi bhi message-type ke andar ho sakta hai (text reply
+      // ke liye extendedTextMessage mein, voice-note reply ke liye seedha
+      // audioMessage ke andar) — dono jagah check karte hain.
+      const voiceContextInfo = contentMsg?.extendedTextMessage?.contextInfo || audioContent?.contextInfo;
+      const mentionedJids = voiceContextInfo?.mentionedJid || [];
       let isMentioned = mentionedJids.some(jid => extractNumber(jid) === botNumber);
-      let replyParticipant = contentMsg?.extendedTextMessage?.contextInfo?.participant;
+      let replyParticipant = voiceContextInfo?.participant;
       if (replyParticipant && replyParticipant.includes('@lid')) {
         replyParticipant = await resolveLidToPn(sock, replyParticipant);
       }
       const isReplyToBot = replyParticipant && extractNumber(replyParticipant) === botNumber;
 
-      const voiceDmAllowed = !isGroup;
-      const voiceGroupAllowed = isGroup && (isMentioned || isReplyToBot);
+      const voiceDmAllowed = !isGroup && activeConfig.voiceChatbotDM;
+      const voiceGroupAllowed = isGroup && activeConfig.voiceChatbotGroup && (isMentioned || isReplyToBot);
 
       if (voiceDmAllowed || voiceGroupAllowed) {
         try {
@@ -231,10 +235,11 @@ const handleMessage = async (sock, msg) => {
 
           if (replyText) {
             // 3. Text-to-Speech (gTTS + ffmpeg OGG/Opus)
-            const voiceBuffer = await textToSpeech(replyText);
+            const voiceResult = await textToSpeech(replyText);
 
-            if (voiceBuffer) {
-              await sock.sendMessage(from, { audio: voiceBuffer, mimetype: 'audio/ogg; codecs=opus', ptt: true }, { quoted: msg });
+            if (voiceResult) {
+              const mimetype = voiceResult.format === 'ogg' ? 'audio/ogg; codecs=opus' : 'audio/mpeg';
+              await sock.sendMessage(from, { audio: voiceResult.buffer, mimetype, ptt: true }, { quoted: msg });
             } else {
               // TTS fail ho jaye to kam az kam text reply de dein
               await sock.sendMessage(from, { text: replyText }, { quoted: msg });

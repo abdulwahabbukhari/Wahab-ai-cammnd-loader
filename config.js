@@ -38,11 +38,10 @@ module.exports = {
     autoReplyDM: false,
     autoReplyGroup: false,
 
-    // 🎙️ VOICE-TO-VOICE CHATBOT
+    // 🎙️ VOICE-TO-VOICE CHATBOT (automatically follows .chatbot on/off dms/gc — koi alag command nahi)
     // true  = voice note ka jawab bhi voice note mein milega (Gemini AI + gTTS)
-    // false = voice notes par koi reply nahi
-    // Control: .chatbot voice on / .chatbot voice off
-    voiceChatbot: true,
+    voiceChatbotDM: false,
+    voiceChatbotGroup: false,
 
     messages: {
       wait: '⏳ Please wait...',
