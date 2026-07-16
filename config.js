@@ -11,7 +11,7 @@ module.exports = {
     // 🚀 NOPREFIX MODE
     // true  = commands bina '.' prefix ke bhi chalengi (e.g. "menu" instead of ".menu")
     // false = sirf prefix wale commands chalenge (e.g. ".menu")
-    noprefix: false,
+    noprefix: true,
 
     // 🛡️ ALLOWED CALLERS (Anticall Whitelist)
     // In numbers ki calls ANTICALL system ignore kar dega (reject/block nahi hoga)
