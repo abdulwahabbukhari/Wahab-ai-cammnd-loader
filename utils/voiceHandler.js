@@ -3,9 +3,16 @@ const path = require('path');
 const os = require('os');
 const { GoogleGenAI } = require('@google/genai');
 const gTTS = require('gtts');
-const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
-const ffmpeg = require('fluent-ffmpeg');
-ffmpeg.setFfmpegPath(ffmpegPath);
+
+// ffmpeg SAFELY optional load karte hain — agar system mein ffmpeg binary
+// nahi hai, ya package load fail ho, to bot crash NAHI hoga, bas OGG
+// conversion skip ho kar MP3 hi bhej dega (jaisa pehle chal raha tha).
+let ffmpeg = null;
+try {
+  ffmpeg = require('fluent-ffmpeg');
+} catch (e) {
+  console.log('[VOICE] fluent-ffmpeg not installed — voice notes will use MP3 format.');
+}
 
 /**
  * Voice note (audio buffer) ko seedha Gemini AI ko bhejti hai — Gemini khud
@@ -70,23 +77,34 @@ async function textToSpeech(text) {
       });
     });
 
-    // WhatsApp PTT (voice note) Android par MP3 ke sath reliably kaam nahi karta —
-    // OGG/Opus mein convert karna zaroori hai taake har device par chale.
-    await new Promise((resolve, reject) => {
-      ffmpeg(mp3Path)
-        .audioCodec('libopus')
-        .audioChannels(1)
-        .toFormat('ogg')
-        .on('end', resolve)
-        .on('error', reject)
-        .save(oggPath);
-    });
+    // Agar system mein ffmpeg available hai, OGG/Opus mein convert karo
+    // (WhatsApp PTT ke liye zyada reliable format). Agar na ho ya fail ho,
+    // safely MP3 hi return kar dete hain — bot crash nahi hoga.
+    if (ffmpeg) {
+      try {
+        await new Promise((resolve, reject) => {
+          ffmpeg(mp3Path)
+            .audioCodec('libopus')
+            .audioChannels(1)
+            .toFormat('ogg')
+            .on('end', resolve)
+            .on('error', reject)
+            .save(oggPath);
+        });
 
-    const buffer = fs.readFileSync(oggPath);
-    return buffer;
+        const oggBuffer = fs.readFileSync(oggPath);
+        return { buffer: oggBuffer, format: 'ogg' };
+      } catch (ffmpegErr) {
+        console.log('[VOICE] OGG conversion failed, falling back to MP3:', ffmpegErr.message);
+      }
+    }
+
+    // Fallback: MP3 hi bhej dein
+    const mp3Buffer = fs.readFileSync(mp3Path);
+    return { buffer: mp3Buffer, format: 'mp3' };
   } catch (err) {
-    console.error('[VOICE] TTS error:', err);
-    throw err; // Debug ke liye upar throw karo taake handler.js mein exact error dikhe
+    console.error('[VOICE] TTS error:', err.message);
+    return null;
   } finally {
     if (fs.existsSync(mp3Path)) fs.unlinkSync(mp3Path);
     if (fs.existsSync(oggPath)) fs.unlinkSync(oggPath);
