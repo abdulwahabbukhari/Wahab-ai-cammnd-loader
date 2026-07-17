@@ -3,7 +3,7 @@ const axios = require('axios');
 module.exports = {
   name: 'mediafire',
   aliases: ['mfire', 'mf', 'mediafiredl'],
-  category: 'general',
+  category: 'media',
   description: 'Download files from a MediaFire link',
   usage: '.mediafire <mediafire-link>',
 
