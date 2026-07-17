@@ -1,6 +1,6 @@
 module.exports = {
     name: 'friend',
-    aliases: ['friends'],
+    aliases: ['friends', 'f' ],
     category: 'fun',
     description: 'Show my friends list',
 
