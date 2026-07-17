@@ -13,6 +13,7 @@ module.exports = {
             'ABDUL MALIK',
             'KUMAIL',
             'QADEER KHAN'
+            'Muhammad Rizwan'
         ];
 
         let text = '👥 *MY FRIENDS LIST*\n\n';
