@@ -1,7 +1,7 @@
 module.exports = {
     name: 'age',
     aliases: ['agecalc', 'dob', 'myage', 'calculateage'],
-    category: 'tools',
+    category: 'fun',
     description: 'Calculate age from date of birth',
 
     async execute(sock, msg, args, extra) {
