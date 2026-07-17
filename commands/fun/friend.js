@@ -12,7 +12,7 @@ module.exports = {
             'ZAHID',
             'ABDUL MALIK',
             'KUMAIL',
-            'QADEER KHAN'
+            'QADEER KHAN',
             'Muhammad Rizwan'
         ];
 
