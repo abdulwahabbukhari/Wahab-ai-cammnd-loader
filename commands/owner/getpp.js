@@ -1,102 +1,125 @@
-/**
- * Get Profile Picture Command
- * Independent setup for Baileys JID and messaging
- */
+const config = require('../../config');
 
 module.exports = {
-  name: 'getpp',
-  aliases: ['getdp', 'dp'],
-  category: 'general',
-  description: 'Get user or group profile picture',
-  usage: '.getpp 923xxxxxxxxx OR .getpp group link',
+    name: 'getpp',
+    aliases: ['dlpp', 'profilepic', 'getdp', 'pp'],
+    category: 'general',
+    description: 'Get user profile picture',
+    usage: '.getpp [reply | @mention | number | me]',
 
-  async execute(sock, msg, args) {
-    // 1. Khud apna 'from' aur 'reply' function set kar rahy hain
-    // Taky handler par depend na karna paray aur 'toString' wala error na aaye
-    const from = msg.key.remoteJid;
-    
-    const reply = async (text) => {
-      return await sock.sendMessage(from, { text: text }, { quoted: msg });
-    };
-
-    try {
-      if (!args || args.length === 0) {
-        return await reply('❌ Example:\n\n.getpp 923001234567\n\nOR\n\n.getpp https://chat.whatsapp.com/xxxxxxxx');
-      }
-
-      const q = args.join(' ');
-      let targetJid = ''; // Hum isko khud theek format main layengy
-
-      // =========================
-      // GROUP LINK HANDLING
-      // =========================
-      if (q.includes("chat.whatsapp.com/")) {
-        const code = q.split("https://chat.whatsapp.com/")[1]?.trim();
-
-        if (!code) {
-          return await reply("❌ Invalid group link.");
-        }
-
+    async execute(sock, msg, args, extra) {
         try {
-          const groupInfo = await sock.groupGetInviteInfo(code);
-          if (!groupInfo || !groupInfo.id) {
-            return await reply("❌ Group not found or link is revoked.");
-          }
-          // Agar id group wali hai tou theek, warna '@g.us' khud lagayengy
-          targetJid = groupInfo.id.includes('@g.us') ? groupInfo.id : `${groupInfo.id}@g.us`;
-          
-        } catch (error) {
-          return await reply("❌ Failed to get group info. Link might be invalid.");
+            let target;
+            let displayName = 'Unknown';
+            let displayNumber = '';
+
+            const text = args.join(' ').trim();
+
+            // Quoted message info
+            const quoted = msg.message?.extendedTextMessage?.contextInfo;
+
+            // Replyed user
+            if (quoted?.participant) {
+                target = quoted.participant;
+                if (quoted.pushName) displayName = quoted.pushName;
+            }
+
+            // Mentioned user
+            else if (msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length) {
+                target = msg.message.extendedTextMessage.contextInfo.mentionedJid[0];
+            }
+
+            // Me
+            else if (text.toLowerCase() === "me") {
+                target = extra.sender;
+            }
+
+            // Number
+            else if (text) {
+                const input = text.replace(/\D/g, '');
+
+                if (input.length >= 10) {
+                    target = `${input}@s.whatsapp.net`;
+                    displayNumber = `+${input}`;
+                } else {
+                    return extra.reply(
+                        "❌ *Invalid number!*\n\nExample:\n.getpp 923001234567"
+                    );
+                }
+            }
+
+            // No input
+            else {
+                return extra.reply(`📸 *Get Profile Picture*
+
+*Usage:*
+• Reply to someone's message:
+.getpp
+
+• Mention someone:
+.getpp @user
+
+• Enter a number:
+.getpp 923001234567
+
+• Get your own DP:
+.getpp me`);
+            }
+
+            // Get name
+            try {
+                const contact = await sock.onWhatsApp(target);
+
+                if (contact?.length) {
+                    displayName =
+                        contact[0].notify ||
+                        contact[0].verifiedName ||
+                        displayName;
+                }
+            } catch {}
+
+            // Get profile picture
+            let pp;
+
+            try {
+                pp = await sock.profilePictureUrl(target, 'image');
+            } catch {
+                return extra.reply(
+                    `❌ No profile picture found for *${displayName}*`
+                );
+            }
+
+            const caption = `📸 *Profile Picture*
+
+👤 *Name:* ${displayName}
+${displayNumber ? `📱 *Number:* ${displayNumber}\n` : ""}
+
+🤖 *${config.botName}*`;
+
+            const contextInfo = {
+                forwardingScore: 999,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: config.channelId,
+                    newsletterName: config.botName,
+                    serverMessageId: 1
+                }
+            };
+
+            await sock.sendMessage(
+                extra.from,
+                {
+                    image: { url: pp },
+                    caption,
+                    mentions: [target],
+                    contextInfo
+                },
+                { quoted: msg }
+            );
+
+        } catch (err) {
+            console.error(err);
+            extra.reply(`❌ Failed to fetch profile picture.\n${err.message}`);
         }
-      }
-
-      // =========================
-      // PHONE NUMBER HANDLING
-      // =========================
-      else {
-        // Sirf numbers filter kar rahy hain (+ ya spaces hata kar)
-        let number = q.replace(/[^0-9]/g, "");
-
-        if (number.length < 10 || number.length > 15) {
-          return await reply("❌ Invalid number. Please provide a valid phone number.");
-        }
-
-        // WhatsApp ka standard user JID format
-        targetJid = `${number}@s.whatsapp.net`;
-      }
-
-      // =========================
-      // GET PROFILE PHOTO
-      // =========================
-      let ppUrl;
-      try {
-        ppUrl = await sock.profilePictureUrl(targetJid, "image");
-      } catch (error) {
-        return await reply("❌ Profile picture not found. (User may have hidden it or doesn't have one).");
-      }
-
-      // =========================
-      // SEND IMAGE
-      // =========================
-      if (ppUrl) {
-        await sock.sendMessage(
-          from,
-          {
-            image: { url: ppUrl },
-            caption: `╭━━〔 *PROFILE PICTURE* 〕━━┈⊷\n┃\n┃◈ • 🆔 ${targetJid}\n┃◈ • ✅ Profile fetched successfully\n┃\n╰──────────────┈⊷\n> 🤖 𝙿𝙾𝚆𝙴𝚁𝙴𝙳 𝙱𝚈 𝚀𝙰𝙳𝙴𝙴𝚁 𝙰𝙸`
-          },
-          { quoted: msg }
-        );
-      }
-
-    } catch (err) {
-      console.error("GETPP CMD ERROR:", err);
-      // Agar phir bhi koi unknown error aaye tou crash hone k bajaye bot ye message bhejega
-      await sock.sendMessage(
-        from, 
-        { text: `❌ Unexpected Error: ${err.message}` }, 
-        { quoted: msg }
-      );
     }
-  }
 };
