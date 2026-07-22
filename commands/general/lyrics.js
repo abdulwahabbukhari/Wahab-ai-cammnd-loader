@@ -99,4 +99,4 @@ ${lyrics}
       return reply(`❌ *ʟʏʀɪᴄs ɴᴏᴛ ғᴏᴜɴᴅ*\n\n📌 *Try:*\n${prefix}lyrics Ed Sheeran Perfect\n${prefix}lyrics Perfect - Ed Sheeran`);
     }
   }
-};
+}; 
