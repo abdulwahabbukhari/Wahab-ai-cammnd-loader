@@ -1,98 +1,102 @@
-const axios = require('axios');
-
-// Common language names/codes jo log likh sakte hain -> ISO-1 code
-// (Musixmatch translate parameter ke liye)
-const LANGUAGE_MAP = {
-  urdu: 'ur', ur: 'ur',
-  hindi: 'hi', hi: 'hi',
-  english: 'en', en: 'en',
-  arabic: 'ar', ar: 'ar',
-  spanish: 'es', es: 'es',
-  french: 'fr', fr: 'fr',
-  german: 'de', de: 'de',
-  turkish: 'tr', tr: 'tr',
-  persian: 'fa', farsi: 'fa', fa: 'fa',
-  punjabi: 'pa', pa: 'pa',
-  bengali: 'bn', bn: 'bn',
-  chinese: 'zh', zh: 'zh',
-  japanese: 'ja', ja: 'ja',
-  korean: 'ko', ko: 'ko',
-  russian: 'ru', ru: 'ru',
-  portuguese: 'pt', pt: 'pt',
-  italian: 'it', it: 'it'
-};
-
 module.exports = {
   name: 'lyrics',
-  aliases: ['lirik', 'songlyrics', 'geet'],
-  category: 'general',
-  description: 'Get lyrics of a song by name, optionally translated to a language',
-  usage: '.lyrics <song name>\n.lyrics <song name> <language>',
+  aliases: ['lyric', 'lirik', 'songtext'],
+  category: 'music',
+  ownerOnly: false,
+  description: 'Get song lyrics with auto fallback APIs',
+  usage: '.lyrics Imagine Dragons Believer',
+  cooldown: 5,
 
   async execute(sock, msg, args, extra) {
+    const { reply, from, prefix } = extra;
+    const text = args.join(' ');
+
+    // ✨ Input Validation
+    if (!text) {
+      return reply(`❌ *Please provide song name!*\n\n📌 *Example:*\n${prefix}lyrics Imagine Dragons Believer\n${prefix}lyrics Believer - Imagine Dragons`);
+    }
+
     try {
-      if (!args[0]) {
-        return extra.reply('❌ Song ka naam dein!\n\nUsage:\n.lyrics perfect ed sheeran\n.lyrics perfect ed sheeran urdu');
-      }
+      // 🎵 React with loading
+      await sock.sendMessage(from, { react: { text: '🎵', key: msg.key } });
+      reply('🎵 *sᴇᴀʀᴄʜɪɴɢ ʟʏʀɪᴄs...*');
 
-      // Check karo last word koi supported language to nahi
-      let queryArgs = [...args];
-      let translateLang = null;
+      // 🔍 Parse Artist & Title
+      let artist = '',
+          title = '';
 
-      const lastWord = args[args.length - 1].toLowerCase();
-      if (LANGUAGE_MAP[lastWord]) {
-        translateLang = LANGUAGE_MAP[lastWord];
-        queryArgs = args.slice(0, -1);
-      }
-
-      const query = queryArgs.join(' ').trim();
-      if (!query) {
-        return extra.reply('❌ Song ka naam dein!\n\nUsage:\n.lyrics perfect ed sheeran\n.lyrics perfect ed sheeran urdu');
-      }
-
-      await extra.reply(`🔍 "${query}" ki lyrics dhoondi ja rahi hain${translateLang ? ` (${lastWord} mein)` : ''}...`);
-
-      let data;
-
-      if (translateLang) {
-        // Translation sirf Musixmatch endpoint mein support hai
-        const res = await axios.get(
-          `https://lyrics.lewdhutao.my.eu.org/v2/musixmatch/lyrics?title=${encodeURIComponent(query)}&translate=${translateLang}`
-        );
-        data = res.data?.data;
+      if (text.includes('-')) {
+        [title, artist] = text.split('-').map(v => v.trim());
       } else {
-        // Normal (bina translation) — YouTube endpoint zyada reliable/wider coverage
-        const res = await axios.get(
-          `https://lyrics.lewdhutao.my.eu.org/v2/youtube/lyrics?title=${encodeURIComponent(query)}`
-        );
-        data = res.data?.data;
+        const split = text.split(' ');
+        artist = split[0];
+        title = split.slice(1).join(' ');
       }
 
-      if (!data || !data.lyrics) {
-        return extra.reply(`❌ "${query}" ki lyrics nahi mil saki. Naam check karein ya artist ka naam bhi add karein.`);
+      // 🌐 Multi-API Fallback System
+      const apis = [
+        `https://api.siputzx.my.id/api/s/lyrics?query=${encodeURIComponent(text)}`,
+        `https://api.nexoracle.com/search/lyrics?apikey=free_key@maher_apis&q=${encodeURIComponent(text)}`,
+        `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`
+      ];
+
+      let result = null;
+
+      for (const apiUrl of apis) {
+        try {
+          console.log(`🎵 Trying API: ${apiUrl}`);
+          const { data: res } = await axios.get(apiUrl, { timeout: 15000 });
+
+          // Extract lyrics from different response formats
+          const lyrics = res.data?.lyrics || res.result?.lyrics || res.lyrics;
+          
+          if (lyrics) {
+            result = res.data || res.result || res;
+            break;
+          }
+        } catch (e) {
+          console.log(`❌ API Failed: ${e.message}`);
+          continue;
+        }
       }
 
-      const caption =
-        `🎵 *${data.trackName || query}*\n` +
-        `🎤 *${data.artistName || 'Unknown Artist'}*` +
-        `${translateLang ? `\n🌐 *Translated:* ${lastWord}` : ''}\n\n` +
-        `${data.lyrics}`;
-
-      // Lyrics kaafi lambi ho sakti hain — trim kar dete hain agar zaroorat pade
-      const finalText = caption.length > 4000 ? caption.slice(0, 4000) + '\n\n... (lyrics trimmed)' : caption;
-
-      if (data.artworkUrl) {
-        await sock.sendMessage(extra.from, {
-          image: { url: data.artworkUrl },
-          caption: finalText
-        }, { quoted: msg });
-      } else {
-        await extra.reply(finalText);
+      // 🚫 No lyrics found
+      if (!result || !result.lyrics) {
+        throw new Error('Lyrics not found in any API');
       }
+
+      // 📝 Format Lyrics (Trim if too long)
+      let lyrics = result.lyrics;
+      if (lyrics.length > 3000) {
+        lyrics = lyrics.substring(0, 3000) + '\n\n_...ᴛʀᴜɴᴄᴀᴛᴇᴅ_';
+      }
+
+      // 🎨 Send Beautiful Lyrics Card
+      await sock.sendMessage(from, {
+        text: `╭━━━〔 *🎵 ʟʏʀɪᴄs* 〕━━━╮
+│
+│ ✦ *sᴏɴɢ:* ${result.title || title || 'Unknown'}
+│ ✦ *ᴀʀᴛɪsᴛ:* ${result.artist || artist || 'Unknown'}
+│
+╰━━━━━━━━━╯
+
+${lyrics}
+
+━━━━━━━━━━
+*ᴘᴏᴡᴇʀᴇᴅ ʙʏ XENORIZE MD*
+© 2026 XENORIZE MD`
+      }, { quoted: msg });
+
+      // ✅ Success React
+      await sock.sendMessage(from, { react: { text: '✅', key: msg.key } });
 
     } catch (error) {
-      console.error('lyrics command error:', error.message);
-      return extra.reply('❌ Lyrics fetch karte waqt error aya. Dobara try karein.');
+      console.error('❌ Lyrics Error:', error.message);
+      
+      // ❌ Error React
+      await sock.sendMessage(from, { react: { text: '❌', key: msg.key } });
+      
+      return reply(`❌ *ʟʏʀɪᴄs ɴᴏᴛ ғᴏᴜɴᴅ*\n\n📌 *Try:*\n${prefix}lyrics Ed Sheeran Perfect\n${prefix}lyrics Perfect - Ed Sheeran`);
     }
   }
 };
