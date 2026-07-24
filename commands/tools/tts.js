@@ -3,7 +3,7 @@ const axios = require('axios');
 module.exports = {
   name: 'tts',
   aliases: ['texttospeech', 'speak'],
-  category: 'general',
+  category: 'tools',
   description: 'Convert text to speech (audio)',
   usage: '.tts <text>',
 
