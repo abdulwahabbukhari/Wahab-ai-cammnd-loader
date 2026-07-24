@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 module.exports = {
-  name: 'setbotdp',
+  name: 'setdp',
   aliases: ['setpp', 'setdp', 'updatedp'],
   category: 'owner',
   ownerOnly: true,
@@ -54,10 +54,10 @@ module.exports = {
       const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
       await sock.updateProfilePicture(botJid, imageBuffer);
 
-      return extra.reply('✅ Bot ki profile picture successfully update ho gayi!\n💾 Local copy bhi save ho gayi: units/bot_image.jpg\n\n⏳ Note: WhatsApp par nayi DP dikhne mein kabhi kabhi kuch minute lag sakte hain (WhatsApp ka apna cache) — turant na dikhe to thodi der baad check karein ya app restart karein.');
+      return extra.reply('✅ profile picture successfully update ho gayi!.');
 
     } catch (error) {
-      console.error('setbotdp command error:', error.message);
+      console.error('setdp command error:', error.message);
       return extra.reply('❌ Profile picture update karte waqt error aya.');
     }
   }
