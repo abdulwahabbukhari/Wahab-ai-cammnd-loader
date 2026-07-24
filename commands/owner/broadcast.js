@@ -39,7 +39,7 @@ module.exports = {
       );
 
       if (contactJids.length === 0) {
-        return extra.reply('❌ Koi contacts nahi mile. (Note: contacts store enable hona chahiye.)');
+        return extra.reply('❌ Koi contacts nahi mile.\n\nWajah: Bot abhi naya hai ya store sync hone mein waqt lagta hai. Kuch der WhatsApp chats browse karein (taake contacts sync hon), phir dobara try karein.');
       }
 
       // Agar limit di gayi hai to sirf utne contacts lo
