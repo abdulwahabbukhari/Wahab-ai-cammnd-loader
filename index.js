@@ -62,8 +62,7 @@ async function startBot() {
     default: makeWASocket,
     useMultiFileAuthState,
     DisconnectReason,
-    fetchLatestBaileysVersion,
-    makeInMemoryStore
+    fetchLatestBaileysVersion
   } = require('@whiskeysockets/baileys');
 
   const sessionFolder = `./${config.sessionName}`;
@@ -96,21 +95,7 @@ async function startBot() {
   const { version } = await fetchLatestBaileysVersion();
 
   // ──────────────────────────────────────────────
-  // 2. In-Memory Store (contacts/chats — broadcast jaisi commands ke liye)
-  // ──────────────────────────────────────────────
-  const storeFile = path.join(sessionFolder, 'baileys_store.json');
-  const store = makeInMemoryStore({ logger: pino({ level: 'silent' }) });
-  try {
-    if (fs.existsSync(storeFile)) store.readFromFile(storeFile);
-  } catch (e) {
-    console.log(chalk.yellow('⚠️ Store file read error (ignored):', e.message));
-  }
-  setInterval(() => {
-    try { store.writeToFile(storeFile); } catch (e) {}
-  }, 10_000);
-
-  // ──────────────────────────────────────────────
-  // 3. Socket Initialization
+  // 2. Socket Initialization
   // ──────────────────────────────────────────────
   const sock = makeWASocket({
     version,
@@ -123,11 +108,8 @@ async function startBot() {
     getMessage: async () => undefined
   });
 
-  store.bind(sock.ev);
-  sock.store = store; // Commands (jaise broadcast.js) sock.store se contacts access karte hain
-
   // ──────────────────────────────────────────────
-  // 4. AUTO PAIRING CODE LOGIN SYSTEM
+  // 3. AUTO PAIRING CODE LOGIN SYSTEM
   // ──────────────────────────────────────────────
   if (!sock.authState.creds.registered) {
     await new Promise(r => setTimeout(r, 2000));
@@ -157,7 +139,7 @@ async function startBot() {
   }
 
   // ──────────────────────────────────────────────
-  // 5. Connection Events
+  // 4. Connection Events
   // ──────────────────────────────────────────────
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect } = update;
@@ -198,7 +180,7 @@ async function startBot() {
   sock.ev.on('creds.update', saveCreds);
 
   // ──────────────────────────────────────────────
-  // 6. Message Handler
+  // 5. Message Handler
   // ──────────────────────────────────────────────
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return;
@@ -227,4 +209,3 @@ setInterval(() => {
     if (global.gc) global.gc();
   } catch {}
 }, 30 * 60 * 1000);
-                    
