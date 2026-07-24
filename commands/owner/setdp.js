@@ -7,7 +7,7 @@ module.exports = {
   category: 'owner',
   ownerOnly: true,
   description: "Update bot's profile picture from a replied/captioned image",
-  usage: 'Reply to an image with .setbotdp, or send image with caption .setbotdp',
+  usage: 'Reply to an image with .setdp, or send image with caption .setdp',
 
   async execute(sock, msg, args, extra) {
     try {
@@ -34,7 +34,7 @@ module.exports = {
       }
 
       if (!targetMessage) {
-        return extra.reply('❌ Kisi image ko reply karein ya image ke sath caption mein .setbotdp likhein!\n\nUsage:\nImage ko reply karein → .setbotdp');
+        return extra.reply('❌ Kisi image ko reply karein ya image ke sath caption mein .setbotdp likhein!\n\nUsage:\nImage ko reply karein → .setdp');
       }
 
       const { downloadMediaMessage } = require('@whiskeysockets/baileys');
