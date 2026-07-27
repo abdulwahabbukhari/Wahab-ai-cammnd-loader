@@ -2,7 +2,7 @@ const axios = require('axios');
 
 module.exports = {
   name: 'tiktokstalk',
-  aliases: ['tstalk', 'ttstalk'],
+  aliases: ['tstalk', 'tinfo],
   category: 'general',
   description: 'Fetch TikTok user profile details.',
   usage: '.tiktokstalk <username>',
