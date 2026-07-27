@@ -4,7 +4,7 @@ const cheerio = require('cheerio'); // npm install cheerio
 module.exports = {
   name: 'tiktokstalk',
   aliases: ['tstalk', 'tinfo'],
-  category: 'general',
+  category: 'fun',
   description: 'Fetch TikTok user profile details (direct scraping, no API).',
   usage: '.tinfo <username>',
 
